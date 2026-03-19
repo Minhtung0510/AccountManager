@@ -80,7 +80,7 @@ const History = {
     const list = await API.getHistory();
     const container = Utils.qs('#historyContainer');
     if (!container) return;
-    const labels = { open:'Mở Facebook', add:'Thêm tài khoản', edit:'Sửa tài khoản', delete:'Xóa tài khoản', autologin:'Tự động đăng nhập ✅', autologin_fail:'Đăng nhập thất bại ❌' };
+    const labels = { open:'Mở Facebook', add:'Thêm tài khoản', edit:'Sửa tài khoản', delete:'Xóa tài khoản' };
     if (!list.length) { container.innerHTML='<div class="empty-state"><p>Chưa có lịch sử</p></div>'; return; }
     container.innerHTML = list.map(h=>`
       <div class="history-row">

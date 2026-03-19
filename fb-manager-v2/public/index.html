@@ -247,7 +247,10 @@
       </div>
       <div class="form-group">
         <label class="form-label">Profile Directory</label>
-        <input class="form-input" id="fProfile" placeholder="Profile 1">
+        <div style="display:flex;gap:6px">
+          <input class="form-input" id="fProfile" placeholder="Profile 1" style="flex:1">
+          <button type="button" class="btn btn-outline" onclick="Accounts.openProfilePicker()">🔍 Chọn</button>
+        </div>
         <div class="form-hint">VD: Profile 1, Profile 2... (mỗi profile = 1 thẻ Chrome riêng)</div>
       </div>
     </div>
@@ -305,5 +308,23 @@
 <script src="js/utils.js"></script>
 <script src="js/accounts.js"></script>
 <script src="js/pages.js"></script>
+
+<!-- MODAL: CHROME PROFILE PICKER -->
+<div id="profilePickerModal" class="modal-overlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🔍 Chọn Chrome Profile</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">Danh sách profile đang có trên máy</div>
+      </div>
+      <button class="modal-close" onclick="Accounts.closeProfilePicker()">✕</button>
+    </div>
+    <div id="profilePickerList" style="max-height:400px;overflow-y:auto;padding:4px 0"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Accounts.closeProfilePicker()">Đóng</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

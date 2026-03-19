@@ -1,3 +1,4 @@
+const { autoLogin, autoLoginMany, closeSession, getActiveSessions } = require('./Autologin');
 // server/index.js — Express backend, lưu dữ liệu vào data/db.json
 
 const express = require('express');
@@ -6,7 +7,6 @@ const fs      = require('fs');
 const path    = require('path');
 const { exec } = require('child_process');
 const os      = require('os');
-const { autoLogin, autoLoginMany, closeSession, getActiveSessions } = require('./autologin');
 
 const app  = express();
 const PORT = 3000;
@@ -287,96 +287,57 @@ app.delete('/api/clear-all', (req, res) => {
 });
 
 
-// ─── START ────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n✅ FB Account Manager đang chạy!`);
-  console.log(`   Mở trình duyệt: http://localhost:${PORT}`);
-  console.log(`   Dữ liệu lưu tại: ${DB_PATH}\n`);
+
+// ─── ROUTE: QUÉT CHROME PROFILES ─────────────────────────────
+app.get('/api/chrome-profiles', (req, res) => {
+  const userDataDir = getChromeUserDataDir();
+  try {
+    if (!fs.existsSync(userDataDir)) return res.status(404).json({ error: 'Không tìm thấy Chrome User Data' });
+    const entries = fs.readdirSync(userDataDir);
+    const profiles = [];
+    for (const entry of entries) {
+      if (entry !== 'Default' && !/^Profile \d+$/.test(entry)) continue;
+      const prefPath = path.join(userDataDir, entry, 'Preferences');
+      if (!fs.existsSync(prefPath)) continue;
+      try {
+        const prefs = JSON.parse(fs.readFileSync(prefPath, 'utf-8'));
+        const name  = prefs?.profile?.name || entry;
+        const email = prefs?.account_info?.[0]?.email || '';
+        profiles.push({ dir: entry, name, email });
+      } catch { profiles.push({ dir: entry, name: entry, email: '' }); }
+    }
+    profiles.sort((a, b) => {
+      if (a.dir === 'Default') return -1;
+      if (b.dir === 'Default') return 1;
+      return (parseInt(a.dir.replace('Profile ',''))||0) - (parseInt(b.dir.replace('Profile ',''))||0);
+    });
+    res.json(profiles);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ─── ROUTE: AUTO LOGIN (1 tài khoản) ──────────────────────────
+// ─── ROUTE: AUTO LOGIN ────────────────────────────────────────
 app.post('/api/autologin', async (req, res) => {
   const { accountId } = req.body;
   const db  = readDB();
   const acc = db.accounts.find(a => a.id === Number(accountId));
   if (!acc) return res.status(404).json({ error: 'Account not found' });
-
   try {
     const result = await autoLogin(acc, db.settings);
-
-    // Cập nhật trạng thái nếu thành công
-    if (result.ok && (result.status === 'logged_in' || result.status === 'already_logged_in' || result.status === 'focused')) {
+    if (result.ok) {
       const idx = db.accounts.findIndex(a => a.id === Number(accountId));
       db.accounts[idx].status    = 'online';
       db.accounts[idx].lastLogin = new Date().toISOString();
     }
-
-    // Ghi lịch sử
-    db.history.unshift({
-      accountId  : acc.id,
-      accountName: acc.name,
-      action     : result.ok ? 'autologin' : 'autologin_fail',
-      color      : acc.color,
-      time       : new Date().toISOString(),
-    });
+    db.history.unshift({ accountId: acc.id, accountName: acc.name, action: result.ok ? 'autologin' : 'autologin_fail', color: acc.color, time: new Date().toISOString() });
     if (db.history.length > 300) db.history.splice(300);
     writeDB(db);
-
     res.json(result);
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ ok: false, message: err.message }); }
 });
 
-// ─── ROUTE: AUTO LOGIN NHIỀU TÀI KHOẢN ───────────────────────
-app.post('/api/autologin-many', async (req, res) => {
-  const { accountIds, delay = 2500 } = req.body;
-  const db = readDB();
-  const accounts = accountIds
-    .map(id => db.accounts.find(a => a.id === Number(id)))
-    .filter(Boolean);
-
-  if (!accounts.length) return res.status(400).json({ error: 'No accounts found' });
-
-  // Trả response ngay, xử lý nền
-  res.json({ ok: true, count: accounts.length, message: `Đang đăng nhập ${accounts.length} tài khoản...` });
-
-  // Chạy nền
-  autoLoginMany(accounts, db.settings, delay, (progress) => {
-    const fresh = readDB();
-    const idx   = fresh.accounts.findIndex(a => a.id === progress.id);
-    if (idx !== -1 && progress.ok) {
-      fresh.accounts[idx].status    = 'online';
-      fresh.accounts[idx].lastLogin = new Date().toISOString();
-    }
-    fresh.history.unshift({
-      accountId  : progress.id,
-      accountName: progress.name,
-      action     : progress.ok ? 'autologin' : 'autologin_fail',
-      color      : fresh.accounts[idx]?.color,
-      time       : new Date().toISOString(),
-    });
-    if (fresh.history.length > 300) fresh.history.splice(300);
-    writeDB(fresh);
-  }).catch(console.error);
-});
-
-// ─── ROUTE: ĐÓNG SESSION ──────────────────────────────────────
-app.post('/api/close-session', async (req, res) => {
-  const { accountId } = req.body;
-  const closed = await closeSession(Number(accountId));
-  if (closed) {
-    const db  = readDB();
-    const idx = db.accounts.findIndex(a => a.id === Number(accountId));
-    if (idx !== -1) {
-      db.accounts[idx].status = 'offline';
-      writeDB(db);
-    }
-  }
-  res.json({ ok: true, closed });
-});
-
-// ─── ROUTE: SESSIONS ĐANG ACTIVE ──────────────────────────────
-app.get('/api/sessions', (req, res) => {
-  res.json({ activeSessions: getActiveSessions() });
+// ─── START ────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`\n✅ FB Account Manager đang chạy!`);
+  console.log(`   Mở trình duyệt: http://localhost:${PORT}`);
+  console.log(`   Dữ liệu lưu tại: ${DB_PATH}\n`);
 });

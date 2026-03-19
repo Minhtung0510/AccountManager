@@ -5,7 +5,10 @@ const API_BASE = 'http://localhost:3000/api';
 const API = {
 
   async _fetch(method, path, body) {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+    };
     if (body !== undefined) opts.body = JSON.stringify(body);
     try {
       const res = await fetch(API_BASE + path, opts);
@@ -38,15 +41,15 @@ const API = {
   getSettings()           { return this._fetch('GET',    '/settings'); },
   saveSettings(data)      { return this._fetch('PUT',    '/settings', data); },
 
-  // Mở Chrome profile (không tự đăng nhập)
+  // Mở Chrome profile
   openAccount(id)         { return this._fetch('POST', '/open',      { accountId: id }); },
   openMany(ids, delay)    { return this._fetch('POST', '/open-many', { accountIds: ids, delay }); },
 
-  // Tự động đăng nhập Facebook
-  autoLogin(id)           { return this._fetch('POST', '/autologin',      { accountId: id }); },
-  autoLoginMany(ids, d)   { return this._fetch('POST', '/autologin-many', { accountIds: ids, delay: d }); },
-  closeSession(id)        { return this._fetch('POST', '/close-session',  { accountId: id }); },
-  getSessions()           { return this._fetch('GET',  '/sessions'); },
+  // Auto login
+  autoLogin(id)           { return this._fetch('POST', '/autologin', { accountId: id }); },
+
+  // Quét Chrome Profiles trên máy
+  getChromeProfiles()     { return this._fetch('GET',  '/chrome-profiles'); },
 
   // Export / Import
   exportJSON() { window.open(API_BASE + '/export', '_blank'); },
