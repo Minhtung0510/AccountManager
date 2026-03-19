@@ -1,0 +1,112 @@
+{
+  "accounts": [
+    {
+      "id": 1,
+      "status": "online",
+      "lastLogin": "2026-03-19T14:59:36.442Z",
+      "name": "Tùng",
+      "email": "nguyenminhtun112@gmail.com",
+      "password": "NguyenTUng0510",
+      "phone": "0937809305",
+      "tag": "Cá nhân",
+      "browser": "Chrome",
+      "profileDir": "Default",
+      "notes": "Không chạy chiến dịch",
+      "color": "#1877F2",
+      "groupId": 3
+    },
+    {
+      "id": 2,
+      "status": "online",
+      "lastLogin": "2026-03-19T14:59:40.879Z",
+      "name": "Tùng 2",
+      "email": "tungnmph30979@fpt.edu.vn",
+      "password": "Minhtug0510",
+      "phone": "0937809305",
+      "tag": "Seeding",
+      "browser": "Chrome",
+      "profileDir": "Profile 2",
+      "notes": "Seeding",
+      "color": "#1877F2",
+      "groupId": null
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "name": "Thẩm mỹ viện A",
+      "icon": "💆",
+      "color": "#1877F2"
+    },
+    {
+      "id": 2,
+      "name": "Skincare B",
+      "icon": "✨",
+      "color": "#22c55e"
+    },
+    {
+      "id": 3,
+      "name": "Tài khoản cá nhân",
+      "icon": "📁",
+      "color": "#1877f2"
+    }
+  ],
+  "history": [
+    {
+      "accountId": 2,
+      "accountName": "Tùng 2",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-19T14:59:40.879Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-19T14:59:36.442Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "Tùng 2",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-19T14:58:53.790Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "Tùng 2",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-19T14:58:50.772Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "Tùng 2",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-19T14:58:47.958Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "Tùng 2",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-19T14:58:43.697Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-19T14:58:13.018Z"
+    }
+  ],
+  "settings": {
+    "theme": "light",
+    "openDelay": 500,
+    "defaultBrowser": "Chrome",
+    "autoStatus": true,
+    "chromePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  }
+}

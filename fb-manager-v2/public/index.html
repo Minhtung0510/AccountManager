@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FB Account Manager</title>
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">f</div>
+      <div><div class="logo-title">FB Manager</div><div class="logo-sub">v2.0 — Node.js</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showPage('accounts',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Tài khoản
+      </button>
+      <button class="nav-item" onclick="showPage('groups',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Nhóm
+      </button>
+      <button class="nav-item" onclick="showPage('history',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>Lịch sử
+      </button>
+      <button class="nav-item" onclick="showPage('settings',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Cài đặt
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-stats">
+        <div class="stat-chip"><span class="val" id="sbTotal">0</span><div class="lbl">Tổng</div></div>
+        <div class="stat-chip"><span class="val" id="sbOnline" style="color:#22c55e">0</span><div class="lbl">Online</div></div>
+        <div class="stat-chip"><span class="val" id="sbPages" style="color:#60a5fa">0</span><div class="lbl">Pages</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- PAGE: TÀI KHOẢN -->
+    <div id="page-accounts" class="page active">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Quản lý tài khoản</h1>
+          <p class="page-desc">Dữ liệu lưu vào <code>data/db.json</code> — không mất khi tắt</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" onclick="Accounts.exportJSON()">⬇ Xuất JSON</button>
+          <label class="btn btn-outline" style="cursor:pointer">
+            ⬆ Nhập JSON
+            <input type="file" accept=".json" style="display:none" onchange="Accounts.importJSON(event)">
+          </label>
+          <button class="btn btn-primary" onclick="Accounts.openModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Thêm tài khoản
+          </button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" id="searchInput" placeholder="Tìm tên, email, ghi chú..." oninput="Accounts.render()">
+        </div>
+        <select class="filter-select" id="filterStatus" onchange="Accounts.render()">
+          <option value="">Tất cả trạng thái</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+        <select class="filter-select" id="filterTag" onchange="Accounts.render()">
+          <option value="">Tất cả nhãn</option>
+          <option value="Page">Page</option>
+          <option value="Affiliate">Affiliate</option>
+          <option value="Cá nhân">Cá nhân</option>
+          <option value="Seeding">Seeding</option>
+        </select>
+        <select class="filter-select" id="filterGroup" onchange="Accounts.render()"></select>
+        <div class="view-toggle">
+          <button class="view-btn active" id="viewGrid" onclick="Accounts.setView('grid')" title="Lưới">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          </button>
+          <button class="view-btn" id="viewList" onclick="Accounts.setView('list')" title="Danh sách">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="bulkBar" class="bulk-bar" style="display:none"></div>
+      <div class="accounts-container" id="accountsContainer">
+        <div class="loading"><div class="spinner"></div>Đang tải dữ liệu từ server...</div>
+      </div>
+    </div>
+
+    <!-- PAGE: NHÓM -->
+    <div id="page-groups" class="page">
+      <div class="page-header">
+        <div><h1 class="page-title">Nhóm tài khoản</h1><p class="page-desc">Phân loại theo chiến dịch hoặc dự án</p></div>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="Groups.openModal()">+ Thêm nhóm</button>
+        </div>
+      </div>
+      <div class="groups-grid" id="groupsContainer"></div>
+    </div>
+
+    <!-- PAGE: LỊCH SỬ -->
+    <div id="page-history" class="page">
+      <div class="page-header">
+        <div><h1 class="page-title">Lịch sử hoạt động</h1><p class="page-desc">Theo dõi các thao tác đã thực hiện</p></div>
+        <div class="header-actions">
+          <button class="btn btn-danger" onclick="History.clear()">Xóa lịch sử</button>
+        </div>
+      </div>
+      <div class="history-list" id="historyContainer"></div>
+    </div>
+
+    <!-- PAGE: CÀI ĐẶT -->
+    <div id="page-settings" class="page">
+      <div class="page-header">
+        <div><h1 class="page-title">Cài đặt</h1><p class="page-desc">Tùy chỉnh hệ thống</p></div>
+      </div>
+      <div class="settings-container">
+
+        <div class="settings-section">
+          <div class="settings-section-title">Giao diện</div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Chế độ màu sắc</div></div>
+            <select class="filter-select" id="sTheme" onchange="Settings.save('theme',this.value)">
+              <option value="light">Sáng (Light)</option>
+              <option value="dark">Tối (Dark)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Mở Chrome</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Đường dẫn Chrome</div>
+              <div class="settings-row-desc">Vị trí file chrome.exe / Google Chrome</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input class="form-input" id="sChromePath" style="width:280px;font-size:12px" placeholder="C:\Program Files\Google\Chrome\Application\chrome.exe">
+              <button class="btn btn-outline btn-sm" onclick="Settings.save('chromePath',document.getElementById('sChromePath').value)">Lưu</button>
+            </div>
+          </div>
+          <div style="padding:0 16px 14px">
+            <div class="info-box">
+              <b>Windows:</b> <code>C:\Program Files\Google\Chrome\Application\chrome.exe</code><br>
+              <b>macOS:</b> <code>/Applications/Google Chrome.app/Contents/MacOS/Google Chrome</code><br>
+              <b>Linux:</b> <code>/usr/bin/google-chrome</code><br><br>
+              Mỗi tài khoản sẽ mở <b>đúng Profile Directory</b> được gán (VD: "Profile 1", "Profile 2"...) — mỗi profile là một thẻ Chrome riêng biệt, không dùng chung cookies.
+            </div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Tự động cập nhật Online</div>
+              <div class="settings-row-desc">Đánh dấu Online khi mở tài khoản</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="sAutoStatus" onchange="Settings.save('autoStatus',this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Độ trễ mở hàng loạt</div>
+              <div class="settings-row-desc">Thời gian chờ giữa mỗi tab khi mở nhiều tài khoản</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" min="300" max="3000" step="100" id="sOpenDelay"
+                oninput="document.getElementById('sOpenDelayVal').textContent=this.value+'ms';Settings.save('openDelay',Number(this.value))"
+                style="width:100px">
+              <span id="sOpenDelayVal" style="font-size:13px;min-width:45px;color:var(--text-secondary)">500ms</span>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Trình duyệt mặc định</div></div>
+            <select class="filter-select" id="sDefaultBrowser" onchange="Settings.save('defaultBrowser',this.value)">
+              <option>Chrome</option><option>Firefox</option><option>Edge</option><option>Brave</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Dữ liệu (lưu tại data/db.json)</div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Xuất toàn bộ dữ liệu</div><div class="settings-row-desc">Tải file db.json về máy</div></div>
+            <button class="btn btn-outline" onclick="Accounts.exportJSON()">⬇ Xuất JSON</button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Xóa toàn bộ dữ liệu</div><div class="settings-row-desc" style="color:var(--red)">Không thể hoàn tác</div></div>
+            <button class="btn btn-danger" onclick="confirmClearAll()">Xóa tất cả</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: TÀI KHOẢN -->
+<div id="accountModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Thêm tài khoản</div>
+      <button class="modal-close" onclick="Accounts.closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Họ và tên *</label>
+      <input class="form-input" id="fName" placeholder="Nguyễn Văn A">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Email / Username *</label>
+        <input class="form-input" id="fEmail" placeholder="email@gmail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu</label>
+        <div class="password-wrap">
+          <input class="form-input" id="fPassword" type="password" placeholder="••••••••">
+          <button class="toggle-pass" type="button" onclick="const f=document.getElementById('fPassword');f.type=f.type==='password'?'text':'password'">👁</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Số điện thoại</label>
+        <input class="form-input" id="fPhone" placeholder="09xxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nhãn</label>
+        <select class="form-select" id="fTag">
+          <option>Cá nhân</option><option>Page</option><option>Affiliate</option><option>Seeding</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Trình duyệt</label>
+        <select class="form-select" id="fBrowser">
+          <option>Chrome</option><option>Firefox</option><option>Edge</option><option>Brave</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Profile Directory</label>
+        <input class="form-input" id="fProfile" placeholder="Profile 1">
+        <div class="form-hint">VD: Profile 1, Profile 2... (mỗi profile = 1 thẻ Chrome riêng)</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nhóm</label>
+        <select class="form-select" id="fGroup"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Màu đại diện</label>
+        <div class="color-grid" id="colorGrid"></div>
+        <input type="hidden" id="colorInput">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ghi chú</label>
+      <textarea class="form-textarea" id="fNotes" placeholder="Mô tả tài khoản, chiến dịch..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Accounts.closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="Accounts.saveModal()">Lưu tài khoản</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NHÓM -->
+<div id="groupModal" class="modal-overlay">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <div class="modal-title" id="groupModalTitle">Thêm nhóm</div>
+      <button class="modal-close" onclick="Groups.closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tên nhóm *</label>
+      <input class="form-input" id="fGroupName" placeholder="VD: Thẩm mỹ viện A">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Icon (emoji)</label>
+        <input class="form-input" id="fGroupIcon" placeholder="💆">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Màu nhóm</label>
+        <input class="form-input" type="color" id="fGroupColor" value="#1877F2" style="padding:4px;height:38px;cursor:pointer">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Groups.closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="Groups.save()">Lưu nhóm</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/accounts.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>
