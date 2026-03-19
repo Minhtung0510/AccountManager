@@ -28,7 +28,24 @@ function readDB() {
 
 function writeDB(data) {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  const tmpPath = DB_PATH + '.tmp';
+  try {
+    // Ghi vào file tạm trước
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+    // Rename file tạm → file thật (atomic, tránh lock)
+    fs.renameSync(tmpPath, DB_PATH);
+  } catch (err) {
+    // Nếu rename fail → thử xóa tmp
+    try { fs.unlinkSync(tmpPath); } catch {}
+    // Retry ghi thẳng sau 100ms
+    setTimeout(() => {
+      try {
+        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      } catch (e) {
+        console.error('writeDB retry failed:', e.message);
+      }
+    }, 100);
+  }
 }
 
 function getDefaultDB() {
