@@ -1,5 +1,5 @@
-// server/Autologin.js — Phase 1: Puppeteer Stealth + Remote Debugging
-// Mở Chrome Profile thật → kết nối Puppeteer qua CDP (không bị detect)
+// server/autologin.js — Phase 1: Mở Chrome Profile thật
+// Update: Lưu process handle để có thể đóng Chrome từ scheduler
 
 const puppeteer     = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -30,26 +30,19 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-// Port bắt đầu cho remote debugging — mỗi profile dùng 1 port riêng
 const BASE_PORT = 9222;
-
-// Lấy port theo profileDir (VD: "Profile 1" → 9222, "Profile 2" → 9223)
 function getDebugPort(profileDir) {
   const num = parseInt((profileDir || '').replace(/\D/g, '')) || 0;
   return BASE_PORT + num;
 }
 
 // ─── SESSION MANAGER ──────────────────────────────────────────
+// sessions[id] = { process, browser, port, profileDir, name, pid }
 
 const sessions = new Map();
-// sessions[id] = { process, browser, port, profileDir, name }
 
 // ─── OPEN CHROME ──────────────────────────────────────────────
 
-/**
- * Mở Chrome Profile với remote debugging port
- * → Sau đó Puppeteer kết nối qua CDP để điều khiển
- */
 async function autoLogin(account, settings) {
   const { id, profileDir, name } = account;
 
@@ -69,7 +62,7 @@ async function autoLogin(account, settings) {
   const args = [
     `--user-data-dir=${userDataDir}`,
     `--profile-directory=${profileDir}`,
-    `--remote-debugging-port=${debugPort}`,   // ← Cho phép Puppeteer kết nối
+    `--remote-debugging-port=${debugPort}`,
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-infobars',
@@ -80,17 +73,18 @@ async function autoLogin(account, settings) {
   let chromeProcess;
   try {
     chromeProcess = spawn(chromePath, args, {
-      detached : true,
+      detached : false,   // ← Đổi thành false để giữ tham chiếu process
       stdio    : 'ignore',
     });
-    chromeProcess.unref();
+    // KHÔNG gọi unref() nữa → giữ process handle để có thể kill sau
   } catch (err) {
     return { ok: false, status: 'launch_error', message: `${name}: Không thể mở Chrome — ${err.message}` };
   }
 
   sessions.set(id, {
     process   : chromeProcess,
-    browser   : null,           // Sẽ được gán khi connectToSession()
+    pid       : chromeProcess.pid,
+    browser   : null,
     port      : debugPort,
     profileDir: profileDir,
     name      : name,
@@ -98,25 +92,80 @@ async function autoLogin(account, settings) {
 
   chromeProcess.on('close', () => {
     const s = sessions.get(id);
-    if (s) { s.process = null; s.browser = null; }
+    if (s) { s.process = null; s.browser = null; s.pid = null; }
+    sessions.delete(id);
+    console.log(`[AutoLogin] 🔴 Chrome đóng: ${name}`);
+  });
+
+  chromeProcess.on('error', (err) => {
+    console.error(`[AutoLogin] Chrome error: ${name}:`, err.message);
     sessions.delete(id);
   });
-  chromeProcess.on('error', () => sessions.delete(id));
 
+  console.log(`[AutoLogin] ✅ Mở Chrome: ${name} | ${profileDir} | PID:${chromeProcess.pid}`);
   return { ok: true, status: 'opened', message: `${name}: Đã mở Facebook ✅` };
+}
+
+// ─── ĐÓNG CHROME ──────────────────────────────────────────────
+
+async function closeChrome(accountId) {
+  const s = sessions.get(accountId);
+  if (!s) return { ok: false, message: 'Không tìm thấy session' };
+
+  const name = s.name;
+
+  // Ngắt Puppeteer browser nếu đang kết nối
+  if (s.browser) {
+    try { await s.browser.disconnect(); } catch {}
+    s.browser = null;
+  }
+
+  // Kill process Chrome
+  if (s.process && !s.process.killed) {
+    try {
+      if (os.platform() === 'win32' && s.pid) {
+        // Windows: dùng taskkill để đóng sạch cả process tree
+        const { exec } = require('child_process');
+        exec(`taskkill /PID ${s.pid} /T /F`, (err) => {
+          if (err) console.log(`[AutoLogin] taskkill error: ${err.message}`);
+        });
+      } else {
+        s.process.kill('SIGTERM');
+        await sleep(1000);
+        if (!s.process.killed) s.process.kill('SIGKILL');
+      }
+      console.log(`[AutoLogin] 🔴 Đã đóng Chrome: ${name} (PID:${s.pid})`);
+    } catch (err) {
+      console.error(`[AutoLogin] Lỗi đóng Chrome ${name}:`, err.message);
+    }
+  }
+
+  sessions.delete(accountId);
+  return { ok: true, message: `Đã đóng Chrome: ${name}` };
+}
+
+// Đóng nhiều tài khoản
+async function closeManyChrome(accountIds) {
+  const results = [];
+  for (const id of accountIds) {
+    const result = await closeChrome(id);
+    results.push({ id, ...result });
+  }
+  return results;
+}
+
+// Đóng tất cả Chrome đang mở
+async function closeAllChrome() {
+  const ids = [...sessions.keys()];
+  return closeManyChrome(ids);
 }
 
 // ─── KẾT NỐI PUPPETEER ────────────────────────────────────────
 
-/**
- * Kết nối Puppeteer vào Chrome đang chạy qua CDP
- * Dùng cho Phase 2+ (điều khiển hành vi)
- */
 async function connectToSession(accountId) {
   const s = sessions.get(accountId);
   if (!s) throw new Error('Tài khoản chưa được mở. Hãy mở trước!');
 
-  // Nếu đã có browser instance → dùng lại
   if (s.browser) {
     try {
       const pages = await s.browser.pages();
@@ -126,13 +175,11 @@ async function connectToSession(accountId) {
     }
   }
 
-  // Chờ Chrome khởi động xong
   await sleep(2000);
 
-  // Kết nối vào Chrome đang chạy qua CDP
   const browser = await puppeteer.connect({
-    browserURL        : `http://localhost:${s.port}`,
-    defaultViewport   : null,
+    browserURL     : `http://localhost:${s.port}`,
+    defaultViewport: null,
   });
 
   s.browser = browser;
@@ -169,18 +216,7 @@ async function autoLoginMany(accounts, settings, delay = 1500, onProgress) {
   return results;
 }
 
-// ─── SESSION CONTROLS ─────────────────────────────────────────
-
-async function closeSession(accountId) {
-  if (sessions.has(accountId)) {
-    const s = sessions.get(accountId);
-    try { if (s.browser) await s.browser.disconnect(); } catch {}
-    try { if (s.process) s.process.kill(); } catch {}
-    sessions.delete(accountId);
-    return true;
-  }
-  return false;
-}
+// ─── SESSION INFO ─────────────────────────────────────────────
 
 function getActiveSessions() {
   return [...sessions.keys()];
@@ -193,16 +229,25 @@ function getSessionInfo(accountId) {
     port      : s.port,
     profileDir: s.profileDir,
     name      : s.name,
+    pid       : s.pid,
     connected : !!s.browser,
-    running   : s.process && !s.process.killed,
+    running   : !!(s.process && !s.process.killed),
   };
+}
+
+function isSessionOpen(accountId) {
+  const s = sessions.get(accountId);
+  return !!(s && s.process && !s.process.killed);
 }
 
 module.exports = {
   autoLogin,
   autoLoginMany,
   connectToSession,
-  closeSession,
+  closeChrome,
+  closeManyChrome,
+  closeAllChrome,
   getActiveSessions,
   getSessionInfo,
+  isSessionOpen,
 };

@@ -1,31 +1,19 @@
-// server/scheduler.js — Hệ thống lên lịch chạy tự động cho từng tài khoản
+// server/scheduler.js — Hệ thống lên lịch tự động
+// Update: Tự động đóng Chrome khi ra ngoài khung giờ
 
 const cron = require('node-cron');
 
-// ─── SCHEDULER MANAGER ────────────────────────────────────────
-
 class SchedulerManager {
   constructor() {
-    // jobs[accountId] = { task, config, status, lastRun, nextRun, logs }
+    // jobs[accountId] = { task, config, status, lastRun, logs }
     this.jobs   = new Map();
-    this.onTick = null; // Callback khi job chạy (set từ index.js)
+    this.onTick = null;   // Callback khi đến giờ mở (set từ index.js)
+    this.onClose = null;  // Callback khi đến giờ đóng (set từ index.js)
   }
 
-  /**
-   * Tạo hoặc cập nhật lịch cho 1 tài khoản
-   * config = {
-   *   enabled: true,
-   *   timeRanges: [
-   *     { from: '08:00', to: '11:00' },
-   *     { from: '14:00', to: '17:00' },
-   *     { from: '20:00', to: '22:00' },
-   *   ],
-   *   daysOfWeek: [1,2,3,4,5],   // 0=CN, 1=T2...6=T7
-   *   intervalMinutes: 30,        // Chạy mỗi 30 phút trong timeRange
-   * }
-   */
+  // ─── SET SCHEDULE ────────────────────────────────────────────
+
   setSchedule(accountId, config) {
-    // Dừng job cũ nếu có
     this.removeSchedule(accountId);
 
     if (!config.enabled) {
@@ -33,7 +21,7 @@ class SchedulerManager {
       return;
     }
 
-    // Chạy mỗi phút để kiểm tra có trong timeRange không
+    // Chạy mỗi phút để kiểm tra
     const task = cron.schedule('* * * * *', () => {
       this._checkAndRun(accountId, config);
     });
@@ -41,52 +29,113 @@ class SchedulerManager {
     this._updateJob(accountId, {
       config,
       task,
-      status : 'scheduled',
-      lastRun: null,
-      logs   : [],
+      status      : 'scheduled',
+      lastRun     : null,
+      lastClosed  : null,   // Lần cuối đóng Chrome
+      wasInRange  : null,   // Trạng thái lần trước (trong hay ngoài khung giờ)
+      logs        : [],
     });
+
+    console.log(`[Scheduler] ✅ Set schedule cho account ${accountId}`);
   }
 
-  _updateJob(accountId, data) {
-    const existing = this.jobs.get(accountId) || {};
-    this.jobs.set(accountId, { ...existing, ...data });
-  }
+  // ─── CHECK & RUN ─────────────────────────────────────────────
 
   _checkAndRun(accountId, config) {
-    const now          = new Date();
-    const dayOfWeek    = now.getDay();
-    const currentTime  = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const now         = new Date();
+    const dayOfWeek   = now.getDay();
+    const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
     // Kiểm tra ngày trong tuần
-    if (config.daysOfWeek && !config.daysOfWeek.includes(dayOfWeek)) return;
+    if (config.daysOfWeek && !config.daysOfWeek.includes(dayOfWeek)) {
+      // Ngoài ngày → đóng nếu đang mở
+      this._handleOutOfRange(accountId, config, currentTime, 'ngoài ngày');
+      return;
+    }
 
     // Kiểm tra có trong timeRange không
     const inRange = (config.timeRanges || []).some(r => {
       return currentTime >= r.from && currentTime <= r.to;
     });
-    if (!inRange) return;
 
-    // Kiểm tra đã chạy chưa (theo intervalMinutes)
     const job = this.jobs.get(accountId);
-    if (job?.lastRun) {
-      const diffMs      = now - new Date(job.lastRun);
-      const diffMinutes = diffMs / 1000 / 60;
-      if (diffMinutes < (config.intervalMinutes || 30)) return;
+
+    if (inRange) {
+      // ── TRONG KHUNG GIỜ → trigger mở ──
+
+      // Cập nhật trạng thái
+      if (job) this._updateJob(accountId, { wasInRange: true });
+
+      // Kiểm tra đã chạy đủ interval chưa
+      if (job?.lastRun) {
+        const diffMs      = now - new Date(job.lastRun);
+        const diffMinutes = diffMs / 1000 / 60;
+        if (diffMinutes < (config.intervalMinutes || 30)) return;
+      }
+
+      // Trigger mở Chrome / behavior
+      this._updateJob(accountId, { lastRun: now.toISOString(), status: 'running' });
+      this._log(accountId, `⚡ Mở lúc ${currentTime}`);
+
+      if (this.onTick) {
+        this.onTick(accountId, config)
+          .then(() => {
+            this._updateJob(accountId, { status: 'scheduled' });
+            this._log(accountId, `✅ Hoàn thành`);
+          })
+          .catch(err => {
+            this._updateJob(accountId, { status: 'error' });
+            this._log(accountId, `❌ Lỗi: ${err.message}`);
+          });
+      }
+
+    } else {
+      // ── NGOÀI KHUNG GIỜ → đóng Chrome nếu cần ──
+      this._handleOutOfRange(accountId, config, currentTime, 'ngoài khung giờ');
     }
+  }
 
-    // Cập nhật lastRun và trigger callback
-    this._updateJob(accountId, { lastRun: now.toISOString(), status: 'running' });
-    this._log(accountId, `⚡ Bắt đầu chạy lúc ${currentTime}`);
+  // ─── XỬ LÝ KHI NGOÀI KHUNG GIỜ ──────────────────────────────
 
-    if (this.onTick) {
-      this.onTick(accountId, config).then(() => {
-        this._updateJob(accountId, { status: 'scheduled' });
-        this._log(accountId, `✅ Hoàn thành`);
-      }).catch(err => {
-        this._updateJob(accountId, { status: 'error' });
-        this._log(accountId, `❌ Lỗi: ${err.message}`);
+  _handleOutOfRange(accountId, config, currentTime, reason) {
+    const job = this.jobs.get(accountId);
+    if (!job) return;
+
+    // Chỉ đóng nếu trước đó đang TRONG khung giờ (vừa kết thúc)
+    // → Tránh gọi đóng liên tục mỗi phút
+    if (job.wasInRange === true) {
+      console.log(`[Scheduler] ⏰ Hết khung giờ: account ${accountId} lúc ${currentTime} (${reason})`);
+      this._log(accountId, `🔴 Hết khung giờ lúc ${currentTime} → đóng Chrome`);
+
+      // Cập nhật trạng thái ngay để không trigger lại
+      this._updateJob(accountId, {
+        wasInRange : false,
+        lastClosed : new Date().toISOString(),
+        status     : 'scheduled',
       });
+
+      // Gọi callback đóng Chrome
+      if (this.onClose) {
+        this.onClose(accountId)
+          .then(result => {
+            this._log(accountId, `✅ Đã đóng: ${result?.message || 'ok'}`);
+          })
+          .catch(err => {
+            this._log(accountId, `⚠️  Lỗi đóng: ${err.message}`);
+          });
+      }
+    } else if (job.wasInRange === null) {
+      // Lần đầu chạy, chưa biết trạng thái → chỉ ghi nhận
+      this._updateJob(accountId, { wasInRange: false });
     }
+    // Nếu wasInRange === false → đã đóng rồi, bỏ qua
+  }
+
+  // ─── HELPERS ─────────────────────────────────────────────────
+
+  _updateJob(accountId, data) {
+    const existing = this.jobs.get(accountId) || {};
+    this.jobs.set(accountId, { ...existing, ...data });
   }
 
   _log(accountId, message) {
@@ -96,6 +145,7 @@ class SchedulerManager {
     logs.unshift({ time: new Date().toISOString(), message });
     if (logs.length > 50) logs.splice(50);
     this._updateJob(accountId, { logs });
+    console.log(`[Scheduler] Account ${accountId}: ${message}`);
   }
 
   removeSchedule(accountId) {
@@ -112,10 +162,12 @@ class SchedulerManager {
     const job = this.jobs.get(accountId);
     if (!job) return { status: 'not_set', logs: [] };
     return {
-      status  : job.status || 'disabled',
-      config  : job.config || null,
-      lastRun : job.lastRun || null,
-      logs    : job.logs || [],
+      status    : job.status    || 'disabled',
+      config    : job.config    || null,
+      lastRun   : job.lastRun   || null,
+      lastClosed: job.lastClosed|| null,
+      wasInRange: job.wasInRange,
+      logs      : job.logs      || [],
     };
   }
 
@@ -123,9 +175,10 @@ class SchedulerManager {
     const result = {};
     for (const [id, job] of this.jobs) {
       result[id] = {
-        status  : job.status || 'disabled',
-        config  : job.config || null,
-        lastRun : job.lastRun || null,
+        status    : job.status    || 'disabled',
+        config    : job.config    || null,
+        lastRun   : job.lastRun   || null,
+        lastClosed: job.lastClosed|| null,
       };
     }
     return result;

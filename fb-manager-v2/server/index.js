@@ -1,6 +1,11 @@
 // server/index.js — Express backend
 
-const { autoLogin, autoLoginMany, closeSession, getActiveSessions } = require('./autologin');
+const {
+  autoLogin, autoLoginMany,
+  closeChrome, closeManyChrome, closeAllChrome,
+  getActiveSessions,
+} = require('./autologin');
+
 const scheduler = require('./scheduler');
 const behavior  = require('./behavior');
 
@@ -20,6 +25,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ─── DB HELPERS ───────────────────────────────────────────────
+
 function readDB() {
   try {
     if (!fs.existsSync(DB_PATH)) return getDefaultDB();
@@ -44,13 +50,8 @@ function writeDB(data) {
 
 function getDefaultDB() {
   return {
-    accounts: [
-      { id:1, name:'Nguyễn Văn A', email:'nguyenvana@gmail.com', password:'Pass@1234', phone:'0901234567', tag:'Page', groupId:1, status:'offline', browser:'Chrome', profileDir:'Profile 1', lastLogin:null, notes:'Trang chủ thẩm mỹ', color:'#1877F2' },
-      { id:2, name:'Trần Thị B',   email:'tranthib@gmail.com',   password:'Pass@5678', phone:'0912345678', tag:'Affiliate', groupId:1, status:'offline', browser:'Chrome', profileDir:'Profile 2', lastLogin:null, notes:'Affiliate skincare', color:'#22c55e' },
-    ],
-    groups: [
-      { id:1, name:'Thẩm mỹ viện A', icon:'💆', color:'#1877F2' },
-    ],
+    accounts: [],
+    groups  : [],
     history : [],
     settings: {
       theme: 'light', openDelay: 500, defaultBrowser: 'Chrome',
@@ -80,8 +81,8 @@ function nextId(list) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-
 // ─── ROUTES: ACCOUNTS ─────────────────────────────────────────
+
 app.get('/api/accounts', (req, res) => res.json(readDB().accounts));
 
 app.post('/api/accounts', (req, res) => {
@@ -108,8 +109,8 @@ app.delete('/api/accounts/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-
 // ─── ROUTES: GROUPS ───────────────────────────────────────────
+
 app.get('/api/groups', (req, res) => res.json(readDB().groups));
 
 app.post('/api/groups', (req, res) => {
@@ -132,13 +133,15 @@ app.put('/api/groups/:id', (req, res) => {
 app.delete('/api/groups/:id', (req, res) => {
   const db = readDB();
   db.groups   = db.groups.filter(g => g.id !== Number(req.params.id));
-  db.accounts = db.accounts.map(a => a.groupId === Number(req.params.id) ? { ...a, groupId: null } : a);
+  db.accounts = db.accounts.map(a =>
+    a.groupId === Number(req.params.id) ? { ...a, groupId: null } : a
+  );
   writeDB(db);
   res.json({ ok: true });
 });
 
-
 // ─── ROUTES: HISTORY ──────────────────────────────────────────
+
 app.get('/api/history', (req, res) => res.json(readDB().history));
 
 app.post('/api/history', (req, res) => {
@@ -157,8 +160,8 @@ app.delete('/api/history', (req, res) => {
   res.json({ ok: true });
 });
 
-
 // ─── ROUTES: SETTINGS ─────────────────────────────────────────
+
 app.get('/api/settings', (req, res) => res.json(readDB().settings));
 
 app.put('/api/settings', (req, res) => {
@@ -168,8 +171,8 @@ app.put('/api/settings', (req, res) => {
   res.json(db.settings);
 });
 
+// ─── ROUTE: MỞ CHROME (exec - không lưu process) ─────────────
 
-// ─── ROUTE: MỞ CHROME ─────────────────────────────────────────
 app.post('/api/open', (req, res) => {
   const { accountId } = req.body;
   const db  = readDB();
@@ -197,7 +200,10 @@ app.post('/api/open', (req, res) => {
     db.accounts[idx].status    = 'online';
     db.accounts[idx].lastLogin = new Date().toISOString();
   }
-  db.history.unshift({ accountId: acc.id, accountName: acc.name, action: 'open', color: acc.color, time: new Date().toISOString() });
+  db.history.unshift({
+    accountId: acc.id, accountName: acc.name,
+    action: 'open', color: acc.color, time: new Date().toISOString(),
+  });
   if (db.history.length > 300) db.history.splice(300);
   writeDB(db);
   res.json({ ok: true, account: acc.name, profileDir });
@@ -224,13 +230,82 @@ app.post('/api/open-many', async (req, res) => {
       db.accounts[idx].status    = 'online';
       db.accounts[idx].lastLogin = new Date().toISOString();
     }
-    db.history.unshift({ accountId: acc.id, accountName: acc.name, action: 'open', color: acc.color, time: new Date().toISOString() });
+    db.history.unshift({
+      accountId: acc.id, accountName: acc.name,
+      action: 'open', color: acc.color, time: new Date().toISOString(),
+    });
     writeDB(db);
   }
 });
 
+// ─── ROUTE: AUTO LOGIN (lưu process handle) ───────────────────
 
-// ─── ROUTE: EXPORT / IMPORT ───────────────────────────────────
+app.post('/api/autologin', async (req, res) => {
+  const { accountId } = req.body;
+  const db  = readDB();
+  const acc = db.accounts.find(a => a.id === Number(accountId));
+  if (!acc) return res.status(404).json({ error: 'Account not found' });
+  try {
+    const result = await autoLogin(acc, db.settings);
+    if (result.ok) {
+      const idx = db.accounts.findIndex(a => a.id === Number(accountId));
+      db.accounts[idx].status    = 'online';
+      db.accounts[idx].lastLogin = new Date().toISOString();
+    }
+    db.history.unshift({
+      accountId: acc.id, accountName: acc.name,
+      action: result.ok ? 'autologin' : 'autologin_fail',
+      color: acc.color, time: new Date().toISOString(),
+    });
+    if (db.history.length > 300) db.history.splice(300);
+    writeDB(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+// ─── ROUTES: ĐÓNG CHROME ──────────────────────────────────────
+
+// Đóng Chrome 1 tài khoản
+app.post('/api/close-chrome', async (req, res) => {
+  const { accountId } = req.body;
+  const db  = readDB();
+  const acc = db.accounts.find(a => a.id === Number(accountId));
+  if (!acc) return res.status(404).json({ error: 'Account not found' });
+
+  // Dừng behavior nếu đang chạy
+  if (behavior.getBehaviorStatus(Number(accountId)).running) {
+    behavior.stopBehavior(Number(accountId));
+  }
+
+  const result = await closeChrome(Number(accountId));
+
+  // Cập nhật offline
+  const idx = db.accounts.findIndex(a => a.id === Number(accountId));
+  if (idx !== -1) {
+    db.accounts[idx].status = 'offline';
+    db.history.unshift({
+      accountId: acc.id, accountName: acc.name,
+      action: 'chrome_closed', color: acc.color, time: new Date().toISOString(),
+    });
+    if (db.history.length > 300) db.history.splice(300);
+    writeDB(db);
+  }
+  res.json(result);
+});
+
+// Đóng tất cả Chrome
+app.post('/api/close-all-chrome', async (req, res) => {
+  const results = await closeAllChrome();
+  const db = readDB();
+  db.accounts.forEach(a => { a.status = 'offline'; });
+  writeDB(db);
+  res.json({ ok: true, results });
+});
+
+// ─── ROUTES: EXPORT / IMPORT ──────────────────────────────────
+
 app.get('/api/export', (req, res) => {
   const db = readDB();
   res.setHeader('Content-Disposition', `attachment; filename="fb-accounts-${Date.now()}.json"`);
@@ -260,8 +335,8 @@ app.delete('/api/clear-all', (req, res) => {
   res.json({ ok: true });
 });
 
-
 // ─── ROUTE: CHROME PROFILES ───────────────────────────────────
+
 app.get('/api/chrome-profiles', (req, res) => {
   const userDataDir = getChromeUserDataDir();
   try {
@@ -274,7 +349,11 @@ app.get('/api/chrome-profiles', (req, res) => {
       if (!fs.existsSync(prefPath)) continue;
       try {
         const prefs = JSON.parse(fs.readFileSync(prefPath, 'utf-8'));
-        profiles.push({ dir: entry, name: prefs?.profile?.name || entry, email: prefs?.account_info?.[0]?.email || '' });
+        profiles.push({
+          dir  : entry,
+          name : prefs?.profile?.name || entry,
+          email: prefs?.account_info?.[0]?.email || '',
+        });
       } catch { profiles.push({ dir: entry, name: entry, email: '' }); }
     }
     profiles.sort((a, b) => {
@@ -286,29 +365,8 @@ app.get('/api/chrome-profiles', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── ROUTES: SCHEDULER ────────────────────────────────────────
 
-// ─── ROUTE: AUTO LOGIN ────────────────────────────────────────
-app.post('/api/autologin', async (req, res) => {
-  const { accountId } = req.body;
-  const db  = readDB();
-  const acc = db.accounts.find(a => a.id === Number(accountId));
-  if (!acc) return res.status(404).json({ error: 'Account not found' });
-  try {
-    const result = await autoLogin(acc, db.settings);
-    if (result.ok) {
-      const idx = db.accounts.findIndex(a => a.id === Number(accountId));
-      db.accounts[idx].status    = 'online';
-      db.accounts[idx].lastLogin = new Date().toISOString();
-    }
-    db.history.unshift({ accountId: acc.id, accountName: acc.name, action: result.ok ? 'autologin' : 'autologin_fail', color: acc.color, time: new Date().toISOString() });
-    if (db.history.length > 300) db.history.splice(300);
-    writeDB(db);
-    res.json(result);
-  } catch (err) { res.status(500).json({ ok: false, message: err.message }); }
-});
-
-
-// ─── ROUTE: SCHEDULER ─────────────────────────────────────────
 app.get('/api/scheduler/:id', (req, res) => res.json(scheduler.getStatus(Number(req.params.id))));
 app.get('/api/scheduler',     (req, res) => res.json(scheduler.getAllStatus()));
 
@@ -328,28 +386,25 @@ app.delete('/api/scheduler/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-
 // ─── ROUTE: SESSIONS ──────────────────────────────────────────
+
 app.get('/api/sessions', (req, res) => {
   res.json({ activeSessions: getActiveSessions() });
 });
 
+// ─── ROUTES: BEHAVIOR ─────────────────────────────────────────
 
-// ─── ROUTE: BEHAVIOR ──────────────────────────────────────────
-
-// Bắt đầu giả lập — Puppeteer tự mở Chrome
 app.post('/api/behavior/start', async (req, res) => {
   const { accountId, config } = req.body;
   const db  = readDB();
   const acc = db.accounts.find(a => a.id === Number(accountId));
   if (!acc) return res.status(404).json({ error: 'Account not found' });
- 
-  // Nếu đang chạy rồi
+
   const status = behavior.getBehaviorStatus(Number(accountId));
   if (status.running) {
-    return res.json({ ok: false, message: `${acc.name}: Đang chạy rồi! Dừng trước rồi thử lại.` });
+    return res.json({ ok: false, message: `${acc.name}: Đang chạy rồi!` });
   }
- 
+
   const behaviorConfig = {
     durationMinutes: config?.durationMinutes || 10,
     reactionRate   : config?.reactionRate    || 40,
@@ -359,23 +414,11 @@ app.post('/api/behavior/start', async (req, res) => {
     hotReadTimeMax : 40000,
     pauseMin       : 2000,
     pauseMax       : 6000,
-    scrollMin      : 400,
-    scrollMax      : 800,
   };
- 
-  // Trả response trước
-  res.json({ ok: true, message: `🤖 Đang mở Chrome và bắt đầu giả lập: ${acc.name}...` });
- 
-  // Chạy nền
+
+  res.json({ ok: true, message: `🤖 Đang bắt đầu giả lập: ${acc.name}...` });
+
   behavior.startBehavior(acc, db.settings, behaviorConfig, (progress) => {
-    const icons = { start:'▶', reading:'👁', reading_hot:'🔥', reacted:'❤️', done:'✅' };
-    console.log(
-      `[Behavior] ${icons[progress.event] || '•'} ${progress.name}: ${progress.event}`,
-      progress.emotion ? `→ ${progress.emotion}` : '',
-      progress.stats   ? `| 👁${progress.stats.postsViewed} ❤️${progress.stats.postsReacted}` : ''
-    );
- 
-    // Ghi lịch sử khi thả cảm xúc
     if (progress.event === 'reacted') {
       try {
         const fresh = readDB();
@@ -393,74 +436,53 @@ app.post('/api/behavior/start', async (req, res) => {
           if (fresh.history.length > 300) fresh.history.splice(300);
           writeDB(fresh);
         }
-      } catch (e) {
-        console.error('[Behavior] writeDB error:', e.message);
-      }
+      } catch (e) { console.error('[Behavior] writeDB error:', e.message); }
     }
- 
-    // Cập nhật trạng thái khi xong
     if (progress.event === 'done') {
       try {
         const fresh = readDB();
         const idx   = fresh.accounts.findIndex(a => a.id === Number(accountId));
-        if (idx !== -1) {
-          fresh.accounts[idx].status = 'offline';
-          writeDB(fresh);
-        }
+        if (idx !== -1) { fresh.accounts[idx].status = 'offline'; writeDB(fresh); }
       } catch {}
     }
-  }).catch(err => {
-    console.error('[Behavior] Fatal error:', err.message);
-  });
+  }).catch(err => console.error('[Behavior] Fatal error:', err.message));
 });
- 
-// Dừng giả lập
+
 app.post('/api/behavior/stop', (req, res) => {
   const { accountId } = req.body;
   const stopped = behavior.stopBehavior(Number(accountId));
   if (stopped) {
-    // Cập nhật status offline
     const db  = readDB();
     const idx = db.accounts.findIndex(a => a.id === Number(accountId));
-    if (idx !== -1) {
-      db.accounts[idx].status = 'offline';
-      writeDB(db);
-    }
+    if (idx !== -1) { db.accounts[idx].status = 'offline'; writeDB(db); }
   }
   res.json({ ok: true, stopped });
 });
- 
-// Trạng thái 1 tài khoản
+
 app.get('/api/behavior/status/:id', (req, res) => {
   res.json(behavior.getBehaviorStatus(Number(req.params.id)));
 });
- 
-// Trạng thái tất cả
+
 app.get('/api/behavior/status', (req, res) => {
   res.json(behavior.getAllBehaviorStatus());
 });
 
-// ─── SCHEDULER CALLBACK ───────────────────────────────────────
-// Gán callback TRƯỚC khi restore
+// ─── SCHEDULER: CALLBACK MỞ ───────────────────────────────────
+
 scheduler.onTick = async (accountId, config) => {
   const db  = readDB();
   const acc = db.accounts.find(a => a.id === Number(accountId));
   if (!acc) return;
- 
+
   console.log(`[Scheduler] ⏰ Tick: ${acc.name}`);
- 
-  // Nếu account có behaviorConfig → chạy behavior
-  // Nếu không → chỉ mở Chrome như cũ
+
   if (config.behaviorEnabled && config.behaviorConfig) {
-    console.log(`[Scheduler] 🤖 Chạy behavior: ${acc.name}`);
- 
-    // Không chạy nếu đang behavior rồi
     const status = behavior.getBehaviorStatus(Number(accountId));
     if (status.running) {
-      console.log(`[Scheduler] ⚠️ ${acc.name} đang chạy behavior rồi, bỏ qua`);
+      console.log(`[Scheduler] ⚠️ ${acc.name} đang chạy behavior, bỏ qua`);
       return;
     }
- 
+
     behavior.scheduledBehavior(acc, db.settings, config.behaviorConfig)
       .then(result => {
         const fresh = readDB();
@@ -479,10 +501,9 @@ scheduler.onTick = async (accountId, config) => {
         if (fresh.history.length > 300) fresh.history.splice(300);
         writeDB(fresh);
       })
-      .catch(err => console.error(`[Scheduler] Behavior error: ${err.message}`));
- 
+      .catch(err => console.error(`[Scheduler] Behavior error:`, err.message));
+
   } else {
-    // Chỉ mở Chrome (hành vi cũ)
     const result = await autoLogin(acc, db.settings);
     db.history.unshift({
       accountId  : acc.id,
@@ -500,8 +521,48 @@ scheduler.onTick = async (accountId, config) => {
     writeDB(db);
   }
 };
- 
-// Restore scheduler SAU khi gán callback
+
+// ─── SCHEDULER: CALLBACK ĐÓNG (MỚI) ──────────────────────────
+
+scheduler.onClose = async (accountId) => {
+  const db  = readDB();
+  const acc = db.accounts.find(a => a.id === Number(accountId));
+  if (!acc) return { ok: false, message: 'Không tìm thấy tài khoản' };
+
+  console.log(`[Scheduler] 🔴 Hết khung giờ → đóng Chrome: ${acc.name}`);
+
+  // Dừng behavior nếu đang chạy
+  const bStatus = behavior.getBehaviorStatus(Number(accountId));
+  if (bStatus.running) {
+    behavior.stopBehavior(Number(accountId));
+    console.log(`[Scheduler] ⏹ Dừng behavior: ${acc.name}`);
+    await sleep(1000);
+  }
+
+  // Đóng Chrome
+  const result = await closeChrome(Number(accountId));
+
+  // Cập nhật offline + lịch sử
+  const idx = db.accounts.findIndex(a => a.id === Number(accountId));
+  if (idx !== -1) {
+    db.accounts[idx].status = 'offline';
+    db.history.unshift({
+      accountId  : acc.id,
+      accountName: acc.name,
+      action     : 'scheduler_close',
+      color      : acc.color,
+      time       : new Date().toISOString(),
+    });
+    if (db.history.length > 300) db.history.splice(300);
+    writeDB(db);
+  }
+
+  console.log(`[Scheduler] ✅ Đã đóng Chrome: ${acc.name}`);
+  return result;
+};
+
+// ─── RESTORE SCHEDULERS ───────────────────────────────────────
+
 (function restoreSchedulers() {
   try {
     const db = readDB();
@@ -515,6 +576,7 @@ scheduler.onTick = async (accountId, config) => {
 })();
 
 // ─── START ────────────────────────────────────────────────────
+
 app.listen(PORT, () => {
   console.log(`\n✅ FB Account Manager đang chạy!`);
   console.log(`   Mở trình duyệt: http://localhost:${PORT}`);

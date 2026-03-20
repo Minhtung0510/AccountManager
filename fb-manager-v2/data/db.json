@@ -3,7 +3,7 @@
     {
       "id": 1,
       "status": "online",
-      "lastLogin": "2026-03-20T03:29:57.704Z",
+      "lastLogin": "2026-03-20T06:15:04.816Z",
       "name": "Tùng",
       "email": "tungnmph30979@fpt.edu.vn",
       "password": "Minhtug0510",
@@ -26,8 +26,8 @@
         ],
         "timeRanges": [
           {
-            "from": "09:00",
-            "to": "11:00"
+            "from": "13:12",
+            "to": "13:14"
           },
           {
             "from": "14:00",
@@ -40,7 +40,7 @@
         ],
         "behaviorEnabled": true,
         "behaviorConfig": {
-          "durationMinutes": 10,
+          "durationMinutes": 360,
           "reactionRate": 100,
           "readTimeMin": 3000,
           "readTimeMax": 10000,
@@ -53,8 +53,8 @@
     },
     {
       "id": 2,
-      "status": "offline",
-      "lastLogin": null,
+      "status": "online",
+      "lastLogin": "2026-03-20T06:15:11.081Z",
       "name": "cc",
       "email": "nguyenminhtun112@gmail.com",
       "password": "NguyenTUng0510",
@@ -77,8 +77,8 @@
         ],
         "timeRanges": [
           {
-            "from": "10:29",
-            "to": "00:00"
+            "from": "13:12",
+            "to": "13:14"
           },
           {
             "from": "14:00",
@@ -87,7 +87,54 @@
         ],
         "behaviorEnabled": true,
         "behaviorConfig": {
-          "durationMinutes": 60,
+          "durationMinutes": 360,
+          "reactionRate": 100,
+          "readTimeMin": 3000,
+          "readTimeMax": 10000,
+          "hotReadTimeMin": 15000,
+          "hotReadTimeMax": 40000,
+          "pauseMin": 2000,
+          "pauseMax": 6000
+        }
+      }
+    },
+    {
+      "id": 3,
+      "status": "online",
+      "lastLogin": "2026-03-20T06:15:04.117Z",
+      "name": "Tùng real",
+      "email": "nguyenminhtun112@gmail.com",
+      "password": "Minhtug0510",
+      "phone": "0937809305",
+      "tag": "Cá nhân",
+      "browser": "Chrome",
+      "profileDir": "Profile 3",
+      "notes": "",
+      "color": "#1877F2",
+      "groupId": null,
+      "schedulerConfig": {
+        "enabled": true,
+        "intervalMinutes": 30,
+        "daysOfWeek": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "timeRanges": [
+          {
+            "from": "13:12",
+            "to": "13:14"
+          },
+          {
+            "from": "14:00",
+            "to": "17:00"
+          }
+        ],
+        "behaviorEnabled": true,
+        "behaviorConfig": {
+          "durationMinutes": 360,
           "reactionRate": 100,
           "readTimeMin": 3000,
           "readTimeMax": 10000,
@@ -115,340 +162,53 @@
   ],
   "history": [
     {
-      "accountId": 1,
-      "accountName": "Tùng",
+      "accountId": 2,
+      "accountName": "cc",
       "action": "scheduler_behavior",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:29:57.704Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:24:02.181Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:23:54.823Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_angry",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:22:35.777Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:21:18.399Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:14:51.403Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:14:44.417Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_angry",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:14:30.273Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:14:22.004Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_behavior_fail",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:11:01.364Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T03:07:51.245Z"
+      "color": "#1877F2",
+      "time": "2026-03-20T06:15:11.081Z"
     },
     {
       "accountId": 1,
       "accountName": "Tùng",
       "action": "scheduler_behavior",
       "color": "#ef4444",
-      "time": "2026-03-20T03:03:31.949Z"
+      "time": "2026-03-20T06:15:04.816Z"
+    },
+    {
+      "accountId": 3,
+      "accountName": "Tùng real",
+      "action": "scheduler_behavior",
+      "color": "#1877F2",
+      "time": "2026-03-20T06:15:04.117Z"
+    },
+    {
+      "accountId": 3,
+      "accountName": "Tùng real",
+      "action": "scheduler_close",
+      "color": "#1877F2",
+      "time": "2026-03-20T06:15:01.968Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "cc",
+      "action": "scheduler_behavior",
+      "color": "#1877F2",
+      "time": "2026-03-20T06:08:02.432Z"
+    },
+    {
+      "accountId": 3,
+      "accountName": "Tùng real",
+      "action": "scheduler_behavior",
+      "color": "#1877F2",
+      "time": "2026-03-20T06:07:59.013Z"
     },
     {
       "accountId": 1,
       "accountName": "Tùng",
-      "action": "behavior_haha",
+      "action": "scheduler_behavior",
       "color": "#ef4444",
-      "time": "2026-03-20T02:57:39.950Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:57:24.584Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "behavior_like",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:57:12.574Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:56:00.417Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:50:00.632Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:45:00.333Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:43:00.370Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:41:00.876Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:41:00.375Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:40:52.017Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:38:00.372Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:37:00.805Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:32:54.676Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:32:46.617Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:31:34.155Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:28:19.506Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:27:00.567Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:26:36.396Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:19:07.687Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:16:55.317Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:15:24.523Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:14:44.561Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:12:00.730Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:11:30.661Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:10:02.573Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:05:33.076Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:03:23.299Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:02:00.508Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:01:00.970Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T02:00:00.863Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T01:34:00.026Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T01:33:00.025Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T01:32:09.486Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_open",
-      "color": "#ef4444",
-      "time": "2026-03-20T01:32:00.022Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T01:04:10.086Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "autologin",
-      "color": "#ef4444",
-      "time": "2026-03-20T01:03:58.718Z"
+      "time": "2026-03-20T06:07:57.451Z"
     }
   ],
   "settings": {
