@@ -127,7 +127,9 @@
       <div class="page-header">
         <div><h1 class="page-title">Cài đặt</h1><p class="page-desc">Tùy chỉnh hệ thống</p></div>
       </div>
-      <div class="settings-section">
+     
+      <div class="settings-container">
+           <div class="settings-section">
   <div class="settings-section-title">🤖 AI — Gemini</div>
   <div class="settings-row">
     <div>
@@ -146,8 +148,6 @@
     </div>
   </div>
 </div>
-      <div class="settings-container">
-
         <div class="settings-section">
           <div class="settings-section-title">Giao diện</div>
           <div class="settings-row">
@@ -400,7 +400,34 @@
           oninput="document.getElementById('schIntervalVal').textContent=this.value+' phút'">
         <span id="schIntervalVal" style="font-size:13px;color:var(--text-secondary);min-width:60px">30 phút</span>
       </div>
-      <div class="form-hint">Mở lại sau mỗi X phút trong khung giờ đã chọn</div>
+      <div class="form-hint">Mở lại sau mỗi X phút trong khung giờ đã chọn</div>  
+      <div class="form-group">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin-top:4px">
+    <div>
+      <div style="font-size:13px;font-weight:600">🤖 Kết hợp giả lập hành vi</div>
+      <div style="font-size:11px;color:var(--text-muted)">Tự động scroll + thả cảm xúc khi đến lịch</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="schBehaviorEnabled" onchange="Accounts.toggleSchedulerBehavior(this.checked)">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+ 
+  <!-- Cấu hình behavior (hiện khi bật) -->
+  <div id="schBehaviorConfig" style="display:none;background:var(--bg-tertiary);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏱ Thời gian chạy (phút)</div>
+        <input type="number" class="form-input" id="schBhDuration" value="10" min="5" max="60" style="font-size:12px">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">❤️ Tỉ lệ thả cảm xúc (%)</div>
+        <input type="number" class="form-input" id="schBhRate" value="40" min="10" max="80" style="font-size:12px">
+      </div>
+    </div>
+    <div class="form-hint" style="margin-top:6px">Cần có Gemini API Key trong Cài đặt để AI phân tích cảm xúc</div>
+  </div>
+</div>
     </div>
 
     <!-- Logs -->

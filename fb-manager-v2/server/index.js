@@ -1,14 +1,15 @@
-// server/index.js — Express backend, lưu dữ liệu vào data/db.json
+// server/index.js — Express backend
 
 const { autoLogin, autoLoginMany, closeSession, getActiveSessions } = require('./autologin');
 const scheduler = require('./scheduler');
-const behavior = require('./behavior');
-const express    = require('express');
-const cors       = require('cors');
-const fs         = require('fs');
-const path       = require('path');
-const { exec }   = require('child_process');
-const os         = require('os');
+const behavior  = require('./behavior');
+
+const express  = require('express');
+const cors     = require('cors');
+const fs       = require('fs');
+const path     = require('path');
+const { exec } = require('child_process');
+const os       = require('os');
 
 const app     = express();
 const PORT    = 3000;
@@ -23,9 +24,7 @@ function readDB() {
   try {
     if (!fs.existsSync(DB_PATH)) return getDefaultDB();
     return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-  } catch {
-    return getDefaultDB();
-  }
+  } catch { return getDefaultDB(); }
 }
 
 function writeDB(data) {
@@ -37,11 +36,8 @@ function writeDB(data) {
   } catch (err) {
     try { fs.unlinkSync(tmpPath); } catch {}
     setTimeout(() => {
-      try {
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-      } catch (e) {
-        console.error('writeDB retry failed:', e.message);
-      }
+      try { fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8'); }
+      catch (e) { console.error('writeDB retry failed:', e.message); }
     }, 100);
   }
 }
@@ -49,37 +45,32 @@ function writeDB(data) {
 function getDefaultDB() {
   return {
     accounts: [
-      { id:1, name:'Nguyễn Văn A', email:'nguyenvana@gmail.com', password:'Pass@1234', phone:'0901234567', tag:'Page',      groupId:1, status:'offline', browser:'Chrome', profileDir:'Profile 1', lastLogin:null, notes:'Trang chủ thẩm mỹ', color:'#1877F2' },
+      { id:1, name:'Nguyễn Văn A', email:'nguyenvana@gmail.com', password:'Pass@1234', phone:'0901234567', tag:'Page', groupId:1, status:'offline', browser:'Chrome', profileDir:'Profile 1', lastLogin:null, notes:'Trang chủ thẩm mỹ', color:'#1877F2' },
       { id:2, name:'Trần Thị B',   email:'tranthib@gmail.com',   password:'Pass@5678', phone:'0912345678', tag:'Affiliate', groupId:1, status:'offline', browser:'Chrome', profileDir:'Profile 2', lastLogin:null, notes:'Affiliate skincare', color:'#22c55e' },
-      { id:3, name:'Lê Văn C',     email:'levanc@gmail.com',     password:'Pass@9012', phone:'0923456789', tag:'Cá nhân',   groupId:2, status:'offline', browser:'Chrome', profileDir:'Profile 3', lastLogin:null, notes:'', color:'#8b5cf6' },
     ],
     groups: [
       { id:1, name:'Thẩm mỹ viện A', icon:'💆', color:'#1877F2' },
-      { id:2, name:'Skincare B',     icon:'✨', color:'#22c55e' },
     ],
-    history: [],
+    history : [],
     settings: {
-      theme          : 'light',
-      openDelay      : 500,
-      defaultBrowser : 'Chrome',
-      autoStatus     : true,
-      chromePath     : getDefaultChromePath(),
+      theme: 'light', openDelay: 500, defaultBrowser: 'Chrome',
+      autoStatus: true, chromePath: getDefaultChromePath(),
     }
   };
 }
 
 function getDefaultChromePath() {
-  const platform = os.platform();
-  if (platform === 'win32')  return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-  if (platform === 'darwin') return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  const p = os.platform();
+  if (p === 'win32')  return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  if (p === 'darwin') return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   return '/usr/bin/google-chrome';
 }
 
 function getChromeUserDataDir() {
-  const platform = os.platform();
-  const home     = os.homedir();
-  if (platform === 'win32')  return path.join(home, 'AppData', 'Local', 'Google', 'Chrome', 'User Data');
-  if (platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'Google', 'Chrome');
+  const p    = os.platform();
+  const home = os.homedir();
+  if (p === 'win32')  return path.join(home, 'AppData', 'Local', 'Google', 'Chrome', 'User Data');
+  if (p === 'darwin') return path.join(home, 'Library', 'Application Support', 'Google', 'Chrome');
   return path.join(home, '.config', 'google-chrome');
 }
 
@@ -91,9 +82,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 
 // ─── ROUTES: ACCOUNTS ─────────────────────────────────────────
-app.get('/api/accounts', (req, res) => {
-  res.json(readDB().accounts);
-});
+app.get('/api/accounts', (req, res) => res.json(readDB().accounts));
 
 app.post('/api/accounts', (req, res) => {
   const db  = readDB();
@@ -162,7 +151,7 @@ app.post('/api/history', (req, res) => {
 });
 
 app.delete('/api/history', (req, res) => {
-  const db   = readDB();
+  const db = readDB();
   db.history = [];
   writeDB(db);
   res.json({ ok: true });
@@ -180,7 +169,7 @@ app.put('/api/settings', (req, res) => {
 });
 
 
-// ─── ROUTE: MỞ CHROME PROFILE ─────────────────────────────────
+// ─── ROUTE: MỞ CHROME ─────────────────────────────────────────
 app.post('/api/open', (req, res) => {
   const { accountId } = req.body;
   const db  = readDB();
@@ -201,52 +190,35 @@ app.post('/api/open', (req, res) => {
     cmd = `"${chromePath}" --profile-directory="${profileDir}" "https://www.facebook.com"`;
   }
 
-  exec(cmd, (error) => {
-    if (error) {
-      console.error('Lỗi mở Chrome:', error.message);
-      const fallback = platform === 'win32' ? `start chrome "https://www.facebook.com"`
-        : platform === 'darwin' ? `open "https://www.facebook.com"`
-        : `xdg-open "https://www.facebook.com"`;
-      exec(fallback);
-    }
-  });
+  exec(cmd, err => { if (err) console.error('Lỗi mở Chrome:', err.message); });
 
   if (settings.autoStatus !== false) {
     const idx = db.accounts.findIndex(a => a.id === Number(accountId));
     db.accounts[idx].status    = 'online';
     db.accounts[idx].lastLogin = new Date().toISOString();
   }
-
   db.history.unshift({ accountId: acc.id, accountName: acc.name, action: 'open', color: acc.color, time: new Date().toISOString() });
   if (db.history.length > 300) db.history.splice(300);
   writeDB(db);
   res.json({ ok: true, account: acc.name, profileDir });
 });
 
-// Mở nhiều tài khoản
 app.post('/api/open-many', async (req, res) => {
   const { accountIds, delay = 500 } = req.body;
   res.json({ ok: true, count: accountIds.length });
-
   for (let i = 0; i < accountIds.length; i++) {
     if (i > 0) await sleep(delay);
     const db  = readDB();
     const acc = db.accounts.find(a => a.id === Number(accountIds[i]));
     if (!acc) continue;
-
     const chromePath = db.settings.chromePath || getDefaultChromePath();
     const profileDir = acc.profileDir || 'Default';
     const platform   = os.platform();
     let cmd;
-    if (platform === 'win32') {
-      cmd = `"${chromePath}" --profile-directory="${profileDir}" "https://www.facebook.com"`;
-    } else if (platform === 'darwin') {
-      cmd = `open -a "Google Chrome" --args --profile-directory="${profileDir}" "https://www.facebook.com"`;
-    } else {
-      cmd = `"${chromePath}" --profile-directory="${profileDir}" "https://www.facebook.com"`;
-    }
+    if (platform === 'win32') cmd = `"${chromePath}" --profile-directory="${profileDir}" "https://www.facebook.com"`;
+    else if (platform === 'darwin') cmd = `open -a "Google Chrome" --args --profile-directory="${profileDir}" "https://www.facebook.com"`;
+    else cmd = `"${chromePath}" --profile-directory="${profileDir}" "https://www.facebook.com"`;
     exec(cmd, err => { if (err) console.error('Open error:', err.message); });
-
     if (db.settings.autoStatus !== false) {
       const idx = db.accounts.findIndex(a => a.id === Number(accountIds[i]));
       db.accounts[idx].status    = 'online';
@@ -258,7 +230,7 @@ app.post('/api/open-many', async (req, res) => {
 });
 
 
-// ─── ROUTE: EXPORT / IMPORT JSON ──────────────────────────────
+// ─── ROUTE: EXPORT / IMPORT ───────────────────────────────────
 app.get('/api/export', (req, res) => {
   const db = readDB();
   res.setHeader('Content-Disposition', `attachment; filename="fb-accounts-${Date.now()}.json"`);
@@ -280,25 +252,20 @@ app.post('/api/import', (req, res) => {
     });
     writeDB(db);
     res.json({ ok: true, added });
-  } catch {
-    res.status(400).json({ error: 'Import failed' });
-  }
+  } catch { res.status(400).json({ error: 'Import failed' }); }
 });
 
-// ─── ROUTE: CLEAR ALL ─────────────────────────────────────────
 app.delete('/api/clear-all', (req, res) => {
   writeDB(getDefaultDB());
   res.json({ ok: true });
 });
 
 
-// ─── ROUTE: QUÉT CHROME PROFILES ──────────────────────────────
+// ─── ROUTE: CHROME PROFILES ───────────────────────────────────
 app.get('/api/chrome-profiles', (req, res) => {
   const userDataDir = getChromeUserDataDir();
   try {
-    if (!fs.existsSync(userDataDir)) {
-      return res.status(404).json({ error: 'Không tìm thấy Chrome User Data' });
-    }
+    if (!fs.existsSync(userDataDir)) return res.status(404).json({ error: 'Không tìm thấy Chrome User Data' });
     const entries  = fs.readdirSync(userDataDir);
     const profiles = [];
     for (const entry of entries) {
@@ -307,12 +274,8 @@ app.get('/api/chrome-profiles', (req, res) => {
       if (!fs.existsSync(prefPath)) continue;
       try {
         const prefs = JSON.parse(fs.readFileSync(prefPath, 'utf-8'));
-        const name  = prefs?.profile?.name || entry;
-        const email = prefs?.account_info?.[0]?.email || '';
-        profiles.push({ dir: entry, name, email });
-      } catch {
-        profiles.push({ dir: entry, name: entry, email: '' });
-      }
+        profiles.push({ dir: entry, name: prefs?.profile?.name || entry, email: prefs?.account_info?.[0]?.email || '' });
+      } catch { profiles.push({ dir: entry, name: entry, email: '' }); }
     }
     profiles.sort((a, b) => {
       if (a.dir === 'Default') return -1;
@@ -320,13 +283,11 @@ app.get('/api/chrome-profiles', (req, res) => {
       return (parseInt(a.dir.replace('Profile ', '')) || 0) - (parseInt(b.dir.replace('Profile ', '')) || 0);
     });
     res.json(profiles);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 
-// ─── ROUTE: AUTO LOGIN ─────────────────────────────────────────
+// ─── ROUTE: AUTO LOGIN ────────────────────────────────────────
 app.post('/api/autologin', async (req, res) => {
   const { accountId } = req.body;
   const db  = readDB();
@@ -339,44 +300,26 @@ app.post('/api/autologin', async (req, res) => {
       db.accounts[idx].status    = 'online';
       db.accounts[idx].lastLogin = new Date().toISOString();
     }
-    db.history.unshift({
-      accountId  : acc.id,
-      accountName: acc.name,
-      action     : result.ok ? 'autologin' : 'autologin_fail',
-      color      : acc.color,
-      time       : new Date().toISOString(),
-    });
+    db.history.unshift({ accountId: acc.id, accountName: acc.name, action: result.ok ? 'autologin' : 'autologin_fail', color: acc.color, time: new Date().toISOString() });
     if (db.history.length > 300) db.history.splice(300);
     writeDB(db);
     res.json(result);
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ ok: false, message: err.message }); }
 });
 
 
 // ─── ROUTE: SCHEDULER ─────────────────────────────────────────
-app.get('/api/scheduler/:id', (req, res) => {
-  res.json(scheduler.getStatus(Number(req.params.id)));
-});
-
-app.get('/api/scheduler', (req, res) => {
-  res.json(scheduler.getAllStatus());
-});
+app.get('/api/scheduler/:id', (req, res) => res.json(scheduler.getStatus(Number(req.params.id))));
+app.get('/api/scheduler',     (req, res) => res.json(scheduler.getAllStatus()));
 
 app.post('/api/scheduler/:id', (req, res) => {
   const accountId = Number(req.params.id);
   const config    = req.body;
-  if (typeof config.enabled === 'undefined') {
-    return res.status(400).json({ error: 'Thiếu trường enabled' });
-  }
+  if (typeof config.enabled === 'undefined') return res.status(400).json({ error: 'Thiếu trường enabled' });
   scheduler.setSchedule(accountId, config);
   const db  = readDB();
   const idx = db.accounts.findIndex(a => a.id === accountId);
-  if (idx !== -1) {
-    db.accounts[idx].schedulerConfig = config;
-    writeDB(db);
-  }
+  if (idx !== -1) { db.accounts[idx].schedulerConfig = config; writeDB(db); }
   res.json({ ok: true, message: config.enabled ? 'Đã bật lịch tự động' : 'Đã tắt lịch' });
 });
 
@@ -388,25 +331,111 @@ app.delete('/api/scheduler/:id', (req, res) => {
 
 // ─── ROUTE: SESSIONS ──────────────────────────────────────────
 app.get('/api/sessions', (req, res) => {
-  const active = getActiveSessions();
-  res.json({ activeSessions: active });
+  res.json({ activeSessions: getActiveSessions() });
 });
+
+
 // ─── ROUTE: BEHAVIOR ──────────────────────────────────────────
 
-
-// Dừng hành vi của 1 tài khoản
+// Bắt đầu giả lập — Puppeteer tự mở Chrome
+app.post('/api/behavior/start', async (req, res) => {
+  const { accountId, config } = req.body;
+  const db  = readDB();
+  const acc = db.accounts.find(a => a.id === Number(accountId));
+  if (!acc) return res.status(404).json({ error: 'Account not found' });
+ 
+  // Nếu đang chạy rồi
+  const status = behavior.getBehaviorStatus(Number(accountId));
+  if (status.running) {
+    return res.json({ ok: false, message: `${acc.name}: Đang chạy rồi! Dừng trước rồi thử lại.` });
+  }
+ 
+  const behaviorConfig = {
+    durationMinutes: config?.durationMinutes || 10,
+    reactionRate   : config?.reactionRate    || 40,
+    readTimeMin    : config?.readTimeMin     || 3000,
+    readTimeMax    : config?.readTimeMax     || 10000,
+    hotReadTimeMin : 15000,
+    hotReadTimeMax : 40000,
+    pauseMin       : 2000,
+    pauseMax       : 6000,
+    scrollMin      : 400,
+    scrollMax      : 800,
+  };
+ 
+  // Trả response trước
+  res.json({ ok: true, message: `🤖 Đang mở Chrome và bắt đầu giả lập: ${acc.name}...` });
+ 
+  // Chạy nền
+  behavior.startBehavior(acc, db.settings, behaviorConfig, (progress) => {
+    const icons = { start:'▶', reading:'👁', reading_hot:'🔥', reacted:'❤️', done:'✅' };
+    console.log(
+      `[Behavior] ${icons[progress.event] || '•'} ${progress.name}: ${progress.event}`,
+      progress.emotion ? `→ ${progress.emotion}` : '',
+      progress.stats   ? `| 👁${progress.stats.postsViewed} ❤️${progress.stats.postsReacted}` : ''
+    );
+ 
+    // Ghi lịch sử khi thả cảm xúc
+    if (progress.event === 'reacted') {
+      try {
+        const fresh = readDB();
+        const idx   = fresh.accounts.findIndex(a => a.id === Number(accountId));
+        if (idx !== -1) {
+          fresh.accounts[idx].status    = 'online';
+          fresh.accounts[idx].lastLogin = new Date().toISOString();
+          fresh.history.unshift({
+            accountId  : acc.id,
+            accountName: acc.name,
+            action     : `behavior_${progress.emotion}`,
+            color      : acc.color,
+            time       : new Date().toISOString(),
+          });
+          if (fresh.history.length > 300) fresh.history.splice(300);
+          writeDB(fresh);
+        }
+      } catch (e) {
+        console.error('[Behavior] writeDB error:', e.message);
+      }
+    }
+ 
+    // Cập nhật trạng thái khi xong
+    if (progress.event === 'done') {
+      try {
+        const fresh = readDB();
+        const idx   = fresh.accounts.findIndex(a => a.id === Number(accountId));
+        if (idx !== -1) {
+          fresh.accounts[idx].status = 'offline';
+          writeDB(fresh);
+        }
+      } catch {}
+    }
+  }).catch(err => {
+    console.error('[Behavior] Fatal error:', err.message);
+  });
+});
+ 
+// Dừng giả lập
 app.post('/api/behavior/stop', (req, res) => {
   const { accountId } = req.body;
   const stopped = behavior.stopBehavior(Number(accountId));
+  if (stopped) {
+    // Cập nhật status offline
+    const db  = readDB();
+    const idx = db.accounts.findIndex(a => a.id === Number(accountId));
+    if (idx !== -1) {
+      db.accounts[idx].status = 'offline';
+      writeDB(db);
+    }
+  }
   res.json({ ok: true, stopped });
 });
  
-// Lấy trạng thái 1 tài khoản
+// Trạng thái 1 tài khoản
 app.get('/api/behavior/status/:id', (req, res) => {
   res.json(behavior.getBehaviorStatus(Number(req.params.id)));
 });
  
-// Lấy trạng thái tất cả
+// Trạng thái tất cả
 app.get('/api/behavior/status', (req, res) => {
   res.json(behavior.getAllBehaviorStatus());
 });
@@ -417,26 +446,61 @@ scheduler.onTick = async (accountId, config) => {
   const db  = readDB();
   const acc = db.accounts.find(a => a.id === Number(accountId));
   if (!acc) return;
-
-  const result = await autoLogin(acc, db.settings);
-
-  db.history.unshift({
-    accountId  : acc.id,
-    accountName: acc.name,
-    action     : 'scheduler_open',
-    color      : acc.color,
-    time       : new Date().toISOString(),
-  });
-  if (db.history.length > 300) db.history.splice(300);
-
-  if (result.ok) {
-    const idx = db.accounts.findIndex(a => a.id === Number(accountId));
-    db.accounts[idx].status    = 'online';
-    db.accounts[idx].lastLogin = new Date().toISOString();
+ 
+  console.log(`[Scheduler] ⏰ Tick: ${acc.name}`);
+ 
+  // Nếu account có behaviorConfig → chạy behavior
+  // Nếu không → chỉ mở Chrome như cũ
+  if (config.behaviorEnabled && config.behaviorConfig) {
+    console.log(`[Scheduler] 🤖 Chạy behavior: ${acc.name}`);
+ 
+    // Không chạy nếu đang behavior rồi
+    const status = behavior.getBehaviorStatus(Number(accountId));
+    if (status.running) {
+      console.log(`[Scheduler] ⚠️ ${acc.name} đang chạy behavior rồi, bỏ qua`);
+      return;
+    }
+ 
+    behavior.scheduledBehavior(acc, db.settings, config.behaviorConfig)
+      .then(result => {
+        const fresh = readDB();
+        const idx   = fresh.accounts.findIndex(a => a.id === Number(accountId));
+        if (idx !== -1) {
+          fresh.accounts[idx].status    = result.ok ? 'online' : 'offline';
+          fresh.accounts[idx].lastLogin = new Date().toISOString();
+        }
+        fresh.history.unshift({
+          accountId  : acc.id,
+          accountName: acc.name,
+          action     : result.ok ? 'scheduler_behavior' : 'scheduler_behavior_fail',
+          color      : acc.color,
+          time       : new Date().toISOString(),
+        });
+        if (fresh.history.length > 300) fresh.history.splice(300);
+        writeDB(fresh);
+      })
+      .catch(err => console.error(`[Scheduler] Behavior error: ${err.message}`));
+ 
+  } else {
+    // Chỉ mở Chrome (hành vi cũ)
+    const result = await autoLogin(acc, db.settings);
+    db.history.unshift({
+      accountId  : acc.id,
+      accountName: acc.name,
+      action     : 'scheduler_open',
+      color      : acc.color,
+      time       : new Date().toISOString(),
+    });
+    if (db.history.length > 300) db.history.splice(300);
+    if (result.ok) {
+      const idx = db.accounts.findIndex(a => a.id === Number(accountId));
+      db.accounts[idx].status    = 'online';
+      db.accounts[idx].lastLogin = new Date().toISOString();
+    }
+    writeDB(db);
   }
-  writeDB(db);
 };
-
+ 
 // Restore scheduler SAU khi gán callback
 (function restoreSchedulers() {
   try {
@@ -449,60 +513,6 @@ scheduler.onTick = async (accountId, config) => {
     });
   } catch {}
 })();
-
-
-// ─── ROUTE: BEHAVIOR ──────────────────────────────────────────
- 
-// Bắt đầu chạy hành vi cho 1 tài khoản
-app.post('/api/behavior/start', async (req, res) => {
-  const { accountId, config } = req.body;
-  const db  = readDB();
-  const acc = db.accounts.find(a => a.id === Number(accountId));
-  if (!acc) return res.status(404).json({ error: 'Account not found' });
- 
-  // Trả response ngay, chạy behavior nền
-  res.json({ ok: true, message: `Đang bắt đầu hành vi cho ${acc.name}...` });
- 
-  const behaviorConfig = {
-    durationMinutes : config?.durationMinutes || 10,
-    reactionRate    : config?.reactionRate    || 40,
-    readTimeMin     : config?.readTimeMin     || 3000,
-    readTimeMax     : config?.readTimeMax     || 10000,
-    hotReadTimeMin  : config?.hotReadTimeMin  || 15000,
-    hotReadTimeMax  : config?.hotReadTimeMax  || 45000,
-    pauseMin        : config?.pauseMin        || 2000,
-    pauseMax        : config?.pauseMax        || 5000,
-    scrollMin       : config?.scrollMin       || 300,
-    scrollMax       : config?.scrollMax       || 700,
-  };
- 
-  behavior.startBehavior(acc, db.settings, behaviorConfig, (progress) => {
-    // Log progress
-    console.log(`[Behavior] ${progress.name}: ${progress.event}`,
-      progress.emotion ? `→ ${progress.emotion}` : '',
-      progress.stats ? `| Viewed: ${progress.stats.postsViewed} Reacted: ${progress.stats.postsReacted}` : ''
-    );
- 
-    // Cập nhật lastLogin khi đang chạy
-    if (progress.event === 'reacted') {
-      const fresh = readDB();
-      const idx   = fresh.accounts.findIndex(a => a.id === Number(accountId));
-      if (idx !== -1) {
-        fresh.accounts[idx].lastLogin = new Date().toISOString();
-        fresh.accounts[idx].status    = 'online';
-        fresh.history.unshift({
-          accountId  : acc.id,
-          accountName: acc.name,
-          action     : `behavior_${progress.emotion}`,
-          color      : acc.color,
-          time       : new Date().toISOString(),
-        });
-        if (fresh.history.length > 300) fresh.history.splice(300);
-        writeDB(fresh);
-      }
-    }
-  }).catch(console.error);
-});
 
 // ─── START ────────────────────────────────────────────────────
 app.listen(PORT, () => {

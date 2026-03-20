@@ -3,7 +3,7 @@
     {
       "id": 1,
       "status": "online",
-      "lastLogin": "2026-03-20T01:34:00.026Z",
+      "lastLogin": "2026-03-20T03:24:02.181Z",
       "name": "Tùng",
       "email": "tungnmph30979@fpt.edu.vn",
       "password": "Minhtug0510",
@@ -16,7 +16,7 @@
       "groupId": 1,
       "schedulerConfig": {
         "enabled": true,
-        "intervalMinutes": 60,
+        "intervalMinutes": 120,
         "daysOfWeek": [
           1,
           2,
@@ -37,7 +37,18 @@
             "from": "20:00",
             "to": "22:00"
           }
-        ]
+        ],
+        "behaviorEnabled": true,
+        "behaviorConfig": {
+          "durationMinutes": 10,
+          "reactionRate": 100,
+          "readTimeMin": 3000,
+          "readTimeMax": 10000,
+          "hotReadTimeMin": 15000,
+          "hotReadTimeMax": 40000,
+          "pauseMin": 2000,
+          "pauseMax": 6000
+        }
       }
     }
   ],
@@ -56,6 +67,293 @@
     }
   ],
   "history": [
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:24:02.181Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:23:54.823Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_angry",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:22:35.777Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:21:18.399Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:14:51.403Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:14:44.417Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_angry",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:14:30.273Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:14:22.004Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_behavior_fail",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:11:01.364Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:07:51.245Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_behavior",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:03:31.949Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_haha",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:57:39.950Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:57:24.584Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "behavior_like",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:57:12.574Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:56:00.417Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:50:00.632Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:45:00.333Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:43:00.370Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:41:00.876Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:41:00.375Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:40:52.017Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:38:00.372Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:37:00.805Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:32:54.676Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:32:46.617Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:31:34.155Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:28:19.506Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:27:00.567Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:26:36.396Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:19:07.687Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:16:55.317Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:15:24.523Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:14:44.561Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:12:00.730Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:11:30.661Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:10:02.573Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:05:33.076Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:03:23.299Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:02:00.508Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:01:00.970Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T02:00:00.863Z"
+    },
     {
       "accountId": 1,
       "accountName": "Tùng",
@@ -104,6 +402,7 @@
     "openDelay": 500,
     "defaultBrowser": "Chrome",
     "autoStatus": true,
-    "chromePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    "chromePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "geminiApiKey": "AIzaSyA5T-IM0kqRdDA4KqAsrvN8uGkdxA52z9w"
   }
 }

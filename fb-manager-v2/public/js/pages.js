@@ -80,7 +80,17 @@ const History = {
     const list = await API.getHistory();
     const container = Utils.qs('#historyContainer');
     if (!container) return;
-    const labels = { open:'Mở Facebook', add:'Thêm tài khoản', edit:'Sửa tài khoản', delete:'Xóa tài khoản' };
+    const labels = {
+      open            : 'Mở Facebook',
+      autologin       : 'Tự động đăng nhập ✅',
+      autologin_fail  : 'Đăng nhập thất bại ❌',
+      scheduler_open  : '⏰ Scheduler mở',
+      behavior_like   : '❤️ Thả Like',
+      behavior_haha   : '😂 Thả Haha',
+      behavior_wow    : '😮 Thả Wow',
+      behavior_sad    : '😢 Thả Buồn',
+      behavior_angry  : '😡 Thả Phẫn nộ',
+    };
     if (!list.length) { container.innerHTML='<div class="empty-state"><p>Chưa có lịch sử</p></div>'; return; }
     container.innerHTML = list.map(h=>`
       <div class="history-row">
@@ -103,14 +113,15 @@ const History = {
 /* ═══════════ SETTINGS ═══════════ */
 const Settings = {
   async load() {
-    const s = await API.getSettings();
+    const s  = await API.getSettings();
     const el = id => Utils.qs('#'+id);
-    if(el('sAutoStatus'))    el('sAutoStatus').checked     = s.autoStatus !== false;
-    if(el('sOpenDelay'))     el('sOpenDelay').value        = s.openDelay || 500;
+    if(el('sAutoStatus'))    el('sAutoStatus').checked      = s.autoStatus !== false;
+    if(el('sOpenDelay'))     el('sOpenDelay').value         = s.openDelay || 500;
     if(el('sOpenDelayVal'))  el('sOpenDelayVal').textContent = (s.openDelay||500)+'ms';
-    if(el('sDefaultBrowser'))el('sDefaultBrowser').value  = s.defaultBrowser || 'Chrome';
-    if(el('sTheme'))         el('sTheme').value            = s.theme || 'light';
-    if(el('sChromePath'))    el('sChromePath').value       = s.chromePath || '';
+    if(el('sDefaultBrowser'))el('sDefaultBrowser').value   = s.defaultBrowser || 'Chrome';
+    if(el('sTheme'))         el('sTheme').value             = s.theme || 'light';
+    if(el('sChromePath'))    el('sChromePath').value        = s.chromePath || '';
+    if(el('sGeminiKey'))     el('sGeminiKey').value         = s.geminiApiKey || '';
   },
 
   async save(key, value) {
@@ -138,7 +149,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   Toast.init();
   Confirm.init();
 
-  // Áp dụng theme sớm
   try {
     const s = await API.getSettings();
     document.documentElement.setAttribute('data-theme', s.theme||'light');
@@ -146,9 +156,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await Accounts.init();
 
-  // Đóng modal khi click overlay
-  Utils.qs('#accountModal')?.addEventListener('click', e=>{ if(e.target===e.currentTarget)Accounts.closeModal(); });
-  Utils.qs('#groupModal')?.addEventListener('click', e=>{ if(e.target===e.currentTarget)Groups.closeModal(); });
+  Utils.qs('#accountModal')?.addEventListener('click',   e=>{ if(e.target===e.currentTarget)Accounts.closeModal(); });
+  Utils.qs('#groupModal')?.addEventListener('click',     e=>{ if(e.target===e.currentTarget)Groups.closeModal(); });
+  Utils.qs('#schedulerModal')?.addEventListener('click', e=>{ if(e.target===e.currentTarget)Accounts.closeScheduler(); });
+  Utils.qs('#behaviorModal')?.addEventListener('click',  e=>{ if(e.target===e.currentTarget)Accounts.closeBehavior(); });
+  Utils.qs('#profilePickerModal')?.addEventListener('click', e=>{ if(e.target===e.currentTarget)Accounts.closeProfilePicker(); });
   Utils.qs('#accountModal')?.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey)Accounts.saveModal(); });
 });
 
