@@ -211,7 +211,7 @@ Vào **Cài đặt** → điền đường dẫn Chrome:
 ### Phase 2 — Giả lập hành vi (đang lên kế hoạch)
 - Scroll newsfeed tốc độ ngẫu nhiên
 - Dừng đọc bài theo độ hot (like/comment)
-- Thả cảm xúc thông minh bằng AI (Claude API)
+- Thả cảm xúc thông minh bằng AI (Gemini API)
 - Đọc comment theo thời gian tuỳ chỉnh
 
 ### Phase 3 — Định hướng nội dung
