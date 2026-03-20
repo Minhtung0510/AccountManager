@@ -127,6 +127,25 @@
       <div class="page-header">
         <div><h1 class="page-title">Cài đặt</h1><p class="page-desc">Tùy chỉnh hệ thống</p></div>
       </div>
+      <div class="settings-section">
+  <div class="settings-section-title">🤖 AI — Gemini</div>
+  <div class="settings-row">
+    <div>
+      <div class="settings-row-label">Gemini API Key</div>
+      <div class="settings-row-desc">Dùng để phân tích nội dung và thả cảm xúc thông minh</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input class="form-input" id="sGeminiKey" type="password" style="width:220px;font-size:12px" placeholder="AIzaSy...">
+      <button class="btn btn-outline btn-sm" onclick="Settings.save('geminiApiKey',document.getElementById('sGeminiKey').value)">Lưu</button>
+    </div>
+  </div>
+  <div style="padding:0 16px 14px">
+    <div class="info-box">
+      Lấy API key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a><br>
+      Model đang dùng: <b>gemini-1.5-flash</b> (miễn phí, nhanh)
+    </div>
+  </div>
+</div>
       <div class="settings-container">
 
         <div class="settings-section">
@@ -393,6 +412,77 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="Accounts.closeScheduler()">Hủy</button>
       <button class="btn btn-primary" onclick="Accounts.saveScheduler()">💾 Lưu lịch</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BEHAVIOR (Giả lập hành vi) -->
+<div id="behaviorModal" class="modal-overlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" id="behaviorTitle">🤖 Giả lập hành vi</div>
+      <button class="modal-close" onclick="Accounts.closeBehavior()">✕</button>
+    </div>
+ 
+    <!-- Gemini API Key -->
+    <div class="form-group">
+      <label class="form-label">🔑 Gemini API Key</label>
+      <div class="password-wrap">
+        <input class="form-input" id="bhGeminiKey" type="password" placeholder="AIzaSy...">
+        <button class="toggle-pass" type="button"
+          onclick="const f=document.getElementById('bhGeminiKey');f.type=f.type==='password'?'text':'password'">👁</button>
+      </div>
+      <div class="form-hint">
+        Lấy miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a>
+      </div>
+    </div>
+ 
+    <!-- Thời gian chạy -->
+    <div class="form-group">
+      <label class="form-label">⏱ Thời gian chạy</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="range" min="5" max="120" step="5" id="bhDuration" value="10" style="flex:1"
+          oninput="document.getElementById('bhDurationVal').textContent=this.value+' phút'">
+        <span id="bhDurationVal" style="font-size:13px;color:var(--text-secondary);min-width:60px">10 phút</span>
+      </div>
+    </div>
+ 
+    <!-- Tỉ lệ thả cảm xúc -->
+    <div class="form-group">
+      <label class="form-label">❤️ Tỉ lệ thả cảm xúc</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="range" min="10" max="80" step="5" id="bhReactionRate" value="40" style="flex:1"
+          oninput="document.getElementById('bhReactionRateVal').textContent=this.value+'%'">
+        <span id="bhReactionRateVal" style="font-size:13px;color:var(--text-secondary);min-width:40px">40%</span>
+      </div>
+      <div class="form-hint">% bài viết được thả cảm xúc (khuyên 30-50%)</div>
+    </div>
+ 
+    <!-- Thời gian đọc bài -->
+    <div class="form-group">
+      <label class="form-label">👁 Thời gian đọc mỗi bài</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Tối thiểu (ms)</div>
+          <input type="number" class="form-input" id="bhReadMin" value="3000" min="1000" max="10000" step="500">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Tối đa (ms)</div>
+          <input type="number" class="form-input" id="bhReadMax" value="10000" min="3000" max="30000" step="500">
+        </div>
+      </div>
+      <div class="form-hint">Bài hot sẽ dừng lâu hơn (15-45 giây tự động)</div>
+    </div>
+ 
+    <!-- Info box -->
+    <div class="info-box" style="margin-bottom:14px">
+      <b>⚠️ Lưu ý:</b> Cần bấm <b>"⚡ Mở Facebook"</b> trước để Chrome đang chạy, sau đó mới chạy giả lập được.<br><br>
+      🤖 Gemini AI sẽ đọc nội dung từng bài và tự động chọn cảm xúc phù hợp (Like/Haha/Wow/Buồn/Phẫn nộ).
+    </div>
+ 
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Accounts.closeBehavior()">Hủy</button>
+      <button class="btn btn-primary" onclick="Accounts.startBehavior()">🤖 Bắt đầu giả lập</button>
     </div>
   </div>
 </div>

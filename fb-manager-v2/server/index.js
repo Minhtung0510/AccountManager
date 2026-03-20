@@ -2,7 +2,7 @@
 
 const { autoLogin, autoLoginMany, closeSession, getActiveSessions } = require('./autologin');
 const scheduler = require('./scheduler');
-
+const behavior = require('./behavior');
 const express    = require('express');
 const cors       = require('cors');
 const fs         = require('fs');
@@ -391,7 +391,25 @@ app.get('/api/sessions', (req, res) => {
   const active = getActiveSessions();
   res.json({ activeSessions: active });
 });
+// ─── ROUTE: BEHAVIOR ──────────────────────────────────────────
 
+
+// Dừng hành vi của 1 tài khoản
+app.post('/api/behavior/stop', (req, res) => {
+  const { accountId } = req.body;
+  const stopped = behavior.stopBehavior(Number(accountId));
+  res.json({ ok: true, stopped });
+});
+ 
+// Lấy trạng thái 1 tài khoản
+app.get('/api/behavior/status/:id', (req, res) => {
+  res.json(behavior.getBehaviorStatus(Number(req.params.id)));
+});
+ 
+// Lấy trạng thái tất cả
+app.get('/api/behavior/status', (req, res) => {
+  res.json(behavior.getAllBehaviorStatus());
+});
 
 // ─── SCHEDULER CALLBACK ───────────────────────────────────────
 // Gán callback TRƯỚC khi restore
@@ -432,6 +450,59 @@ scheduler.onTick = async (accountId, config) => {
   } catch {}
 })();
 
+
+// ─── ROUTE: BEHAVIOR ──────────────────────────────────────────
+ 
+// Bắt đầu chạy hành vi cho 1 tài khoản
+app.post('/api/behavior/start', async (req, res) => {
+  const { accountId, config } = req.body;
+  const db  = readDB();
+  const acc = db.accounts.find(a => a.id === Number(accountId));
+  if (!acc) return res.status(404).json({ error: 'Account not found' });
+ 
+  // Trả response ngay, chạy behavior nền
+  res.json({ ok: true, message: `Đang bắt đầu hành vi cho ${acc.name}...` });
+ 
+  const behaviorConfig = {
+    durationMinutes : config?.durationMinutes || 10,
+    reactionRate    : config?.reactionRate    || 40,
+    readTimeMin     : config?.readTimeMin     || 3000,
+    readTimeMax     : config?.readTimeMax     || 10000,
+    hotReadTimeMin  : config?.hotReadTimeMin  || 15000,
+    hotReadTimeMax  : config?.hotReadTimeMax  || 45000,
+    pauseMin        : config?.pauseMin        || 2000,
+    pauseMax        : config?.pauseMax        || 5000,
+    scrollMin       : config?.scrollMin       || 300,
+    scrollMax       : config?.scrollMax       || 700,
+  };
+ 
+  behavior.startBehavior(acc, db.settings, behaviorConfig, (progress) => {
+    // Log progress
+    console.log(`[Behavior] ${progress.name}: ${progress.event}`,
+      progress.emotion ? `→ ${progress.emotion}` : '',
+      progress.stats ? `| Viewed: ${progress.stats.postsViewed} Reacted: ${progress.stats.postsReacted}` : ''
+    );
+ 
+    // Cập nhật lastLogin khi đang chạy
+    if (progress.event === 'reacted') {
+      const fresh = readDB();
+      const idx   = fresh.accounts.findIndex(a => a.id === Number(accountId));
+      if (idx !== -1) {
+        fresh.accounts[idx].lastLogin = new Date().toISOString();
+        fresh.accounts[idx].status    = 'online';
+        fresh.history.unshift({
+          accountId  : acc.id,
+          accountName: acc.name,
+          action     : `behavior_${progress.emotion}`,
+          color      : acc.color,
+          time       : new Date().toISOString(),
+        });
+        if (fresh.history.length > 300) fresh.history.splice(300);
+        writeDB(fresh);
+      }
+    }
+  }).catch(console.error);
+});
 
 // ─── START ────────────────────────────────────────────────────
 app.listen(PORT, () => {

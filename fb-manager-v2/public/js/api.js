@@ -54,6 +54,12 @@ const API = {
   setScheduler(id, cfg)   { return this._fetch('POST',   `/scheduler/${id}`, cfg); },
   removeScheduler(id)     { return this._fetch('DELETE', `/scheduler/${id}`); },
 
+  // Behavior (Phase 2)
+  startBehavior(id, cfg)  { return this._fetch('POST', '/behavior/start',     { accountId: id, config: cfg }); },
+  stopBehavior(id)        { return this._fetch('POST', '/behavior/stop',      { accountId: id }); },
+  getBehaviorStatus(id)   { return this._fetch('GET',  `/behavior/status/${id}`); },
+  getAllBehaviorStatus()   { return this._fetch('GET',  '/behavior/status'); },
+
   // Sessions
   getSessions()           { return this._fetch('GET',  '/sessions'); },
 
