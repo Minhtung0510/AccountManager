@@ -3,7 +3,7 @@
     {
       "id": 1,
       "status": "online",
-      "lastLogin": "2026-03-20T03:24:02.181Z",
+      "lastLogin": "2026-03-20T03:29:57.704Z",
       "name": "Tùng",
       "email": "tungnmph30979@fpt.edu.vn",
       "password": "Minhtug0510",
@@ -16,7 +16,7 @@
       "groupId": 1,
       "schedulerConfig": {
         "enabled": true,
-        "intervalMinutes": 120,
+        "intervalMinutes": 10,
         "daysOfWeek": [
           1,
           2,
@@ -50,6 +50,53 @@
           "pauseMax": 6000
         }
       }
+    },
+    {
+      "id": 2,
+      "status": "offline",
+      "lastLogin": null,
+      "name": "cc",
+      "email": "nguyenminhtun112@gmail.com",
+      "password": "NguyenTUng0510",
+      "phone": "0937809305",
+      "tag": "Cá nhân",
+      "browser": "Chrome",
+      "profileDir": "Profile 1",
+      "notes": "",
+      "color": "#1877F2",
+      "groupId": null,
+      "schedulerConfig": {
+        "enabled": true,
+        "intervalMinutes": 10,
+        "daysOfWeek": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "timeRanges": [
+          {
+            "from": "10:29",
+            "to": "00:00"
+          },
+          {
+            "from": "14:00",
+            "to": "17:00"
+          }
+        ],
+        "behaviorEnabled": true,
+        "behaviorConfig": {
+          "durationMinutes": 60,
+          "reactionRate": 100,
+          "readTimeMin": 3000,
+          "readTimeMax": 10000,
+          "hotReadTimeMin": 15000,
+          "hotReadTimeMax": 40000,
+          "pauseMin": 2000,
+          "pauseMax": 6000
+        }
+      }
     }
   ],
   "groups": [
@@ -67,6 +114,13 @@
     }
   ],
   "history": [
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_behavior",
+      "color": "#ef4444",
+      "time": "2026-03-20T03:29:57.704Z"
+    },
     {
       "accountId": 1,
       "accountName": "Tùng",
