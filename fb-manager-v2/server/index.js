@@ -1,15 +1,17 @@
-const { autoLogin, autoLoginMany, closeSession, getActiveSessions } = require('./Autologin');
 // server/index.js — Express backend, lưu dữ liệu vào data/db.json
 
-const express = require('express');
-const cors    = require('cors');
-const fs      = require('fs');
-const path    = require('path');
-const { exec } = require('child_process');
-const os      = require('os');
+const { autoLogin, autoLoginMany, closeSession, getActiveSessions } = require('./autologin');
+const scheduler = require('./scheduler');
 
-const app  = express();
-const PORT = 3000;
+const express    = require('express');
+const cors       = require('cors');
+const fs         = require('fs');
+const path       = require('path');
+const { exec }   = require('child_process');
+const os         = require('os');
+
+const app     = express();
+const PORT    = 3000;
 const DB_PATH = path.join(__dirname, '..', 'data', 'db.json');
 
 app.use(cors());
@@ -30,14 +32,10 @@ function writeDB(data) {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const tmpPath = DB_PATH + '.tmp';
   try {
-    // Ghi vào file tạm trước
     fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
-    // Rename file tạm → file thật (atomic, tránh lock)
     fs.renameSync(tmpPath, DB_PATH);
   } catch (err) {
-    // Nếu rename fail → thử xóa tmp
     try { fs.unlinkSync(tmpPath); } catch {}
-    // Retry ghi thẳng sau 100ms
     setTimeout(() => {
       try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
@@ -61,25 +59,35 @@ function getDefaultDB() {
     ],
     history: [],
     settings: {
-      theme: 'light',
-      openDelay: 500,
-      defaultBrowser: 'Chrome',
-      autoStatus: true,
-      chromePath: getDefaultChromePath(),
+      theme          : 'light',
+      openDelay      : 500,
+      defaultBrowser : 'Chrome',
+      autoStatus     : true,
+      chromePath     : getDefaultChromePath(),
     }
   };
 }
 
 function getDefaultChromePath() {
   const platform = os.platform();
-  if (platform === 'win32') return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  if (platform === 'win32')  return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   if (platform === 'darwin') return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   return '/usr/bin/google-chrome';
+}
+
+function getChromeUserDataDir() {
+  const platform = os.platform();
+  const home     = os.homedir();
+  if (platform === 'win32')  return path.join(home, 'AppData', 'Local', 'Google', 'Chrome', 'User Data');
+  if (platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'Google', 'Chrome');
+  return path.join(home, '.config', 'google-chrome');
 }
 
 function nextId(list) {
   return list.length ? Math.max(...list.map(x => x.id)) + 1 : 1;
 }
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 
 // ─── ROUTES: ACCOUNTS ─────────────────────────────────────────
@@ -88,7 +96,7 @@ app.get('/api/accounts', (req, res) => {
 });
 
 app.post('/api/accounts', (req, res) => {
-  const db = readDB();
+  const db  = readDB();
   const acc = { id: nextId(db.accounts), status: 'offline', lastLogin: null, ...req.body };
   db.accounts.push(acc);
   writeDB(db);
@@ -145,7 +153,7 @@ app.delete('/api/groups/:id', (req, res) => {
 app.get('/api/history', (req, res) => res.json(readDB().history));
 
 app.post('/api/history', (req, res) => {
-  const db = readDB();
+  const db    = readDB();
   const entry = { ...req.body, time: new Date().toISOString() };
   db.history.unshift(entry);
   if (db.history.length > 300) db.history.splice(300);
@@ -154,7 +162,7 @@ app.post('/api/history', (req, res) => {
 });
 
 app.delete('/api/history', (req, res) => {
-  const db = readDB();
+  const db   = readDB();
   db.history = [];
   writeDB(db);
   res.json({ ok: true });
@@ -165,28 +173,25 @@ app.delete('/api/history', (req, res) => {
 app.get('/api/settings', (req, res) => res.json(readDB().settings));
 
 app.put('/api/settings', (req, res) => {
-  const db = readDB();
+  const db    = readDB();
   db.settings = { ...db.settings, ...req.body };
   writeDB(db);
   res.json(db.settings);
 });
 
 
-// ─── ROUTE: MỞ CHROME PROFILE ────────────────────────────────
-// Mở đúng profile Chrome riêng cho từng tài khoản
+// ─── ROUTE: MỞ CHROME PROFILE ─────────────────────────────────
 app.post('/api/open', (req, res) => {
   const { accountId } = req.body;
   const db  = readDB();
   const acc = db.accounts.find(a => a.id === Number(accountId));
   if (!acc) return res.status(404).json({ error: 'Account not found' });
 
-  const settings    = db.settings;
-  const chromePath  = settings.chromePath || getDefaultChromePath();
-  const profileDir  = acc.profileDir || 'Default';
-  const userDataDir = getChromeUserDataDir();
-  const platform    = os.platform();
+  const settings   = db.settings;
+  const chromePath = settings.chromePath || getDefaultChromePath();
+  const profileDir = acc.profileDir || 'Default';
+  const platform   = os.platform();
 
-  // Lệnh mở Chrome với --profile-directory riêng
   let cmd;
   if (platform === 'win32') {
     cmd = `"${chromePath}" --profile-directory="${profileDir}" "https://www.facebook.com"`;
@@ -199,37 +204,30 @@ app.post('/api/open', (req, res) => {
   exec(cmd, (error) => {
     if (error) {
       console.error('Lỗi mở Chrome:', error.message);
-      // Fallback: mở Chrome không có profile cụ thể
-      const fallback = platform === 'win32'
-        ? `start chrome "https://www.facebook.com"`
-        : platform === 'darwin'
-        ? `open "https://www.facebook.com"`
+      const fallback = platform === 'win32' ? `start chrome "https://www.facebook.com"`
+        : platform === 'darwin' ? `open "https://www.facebook.com"`
         : `xdg-open "https://www.facebook.com"`;
       exec(fallback);
     }
   });
 
-  // Cập nhật trạng thái nếu autoStatus bật
   if (settings.autoStatus !== false) {
     const idx = db.accounts.findIndex(a => a.id === Number(accountId));
     db.accounts[idx].status    = 'online';
     db.accounts[idx].lastLogin = new Date().toISOString();
   }
 
-  // Ghi lịch sử
   db.history.unshift({ accountId: acc.id, accountName: acc.name, action: 'open', color: acc.color, time: new Date().toISOString() });
   if (db.history.length > 300) db.history.splice(300);
-
   writeDB(db);
   res.json({ ok: true, account: acc.name, profileDir });
 });
 
-// Mở nhiều tài khoản cùng lúc
+// Mở nhiều tài khoản
 app.post('/api/open-many', async (req, res) => {
   const { accountIds, delay = 500 } = req.body;
   res.json({ ok: true, count: accountIds.length });
 
-  // Mở tuần tự với delay (không block response)
   for (let i = 0; i < accountIds.length; i++) {
     if (i > 0) await sleep(delay);
     const db  = readDB();
@@ -258,16 +256,6 @@ app.post('/api/open-many', async (req, res) => {
     writeDB(db);
   }
 });
-
-function getChromeUserDataDir() {
-  const platform = os.platform();
-  const home = os.homedir();
-  if (platform === 'win32') return path.join(home, 'AppData', 'Local', 'Google', 'Chrome', 'User Data');
-  if (platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'Google', 'Chrome');
-  return path.join(home, '.config', 'google-chrome');
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 
 // ─── ROUTE: EXPORT / IMPORT JSON ──────────────────────────────
@@ -304,13 +292,14 @@ app.delete('/api/clear-all', (req, res) => {
 });
 
 
-
-// ─── ROUTE: QUÉT CHROME PROFILES ─────────────────────────────
+// ─── ROUTE: QUÉT CHROME PROFILES ──────────────────────────────
 app.get('/api/chrome-profiles', (req, res) => {
   const userDataDir = getChromeUserDataDir();
   try {
-    if (!fs.existsSync(userDataDir)) return res.status(404).json({ error: 'Không tìm thấy Chrome User Data' });
-    const entries = fs.readdirSync(userDataDir);
+    if (!fs.existsSync(userDataDir)) {
+      return res.status(404).json({ error: 'Không tìm thấy Chrome User Data' });
+    }
+    const entries  = fs.readdirSync(userDataDir);
     const profiles = [];
     for (const entry of entries) {
       if (entry !== 'Default' && !/^Profile \d+$/.test(entry)) continue;
@@ -321,18 +310,23 @@ app.get('/api/chrome-profiles', (req, res) => {
         const name  = prefs?.profile?.name || entry;
         const email = prefs?.account_info?.[0]?.email || '';
         profiles.push({ dir: entry, name, email });
-      } catch { profiles.push({ dir: entry, name: entry, email: '' }); }
+      } catch {
+        profiles.push({ dir: entry, name: entry, email: '' });
+      }
     }
     profiles.sort((a, b) => {
       if (a.dir === 'Default') return -1;
       if (b.dir === 'Default') return 1;
-      return (parseInt(a.dir.replace('Profile ',''))||0) - (parseInt(b.dir.replace('Profile ',''))||0);
+      return (parseInt(a.dir.replace('Profile ', '')) || 0) - (parseInt(b.dir.replace('Profile ', '')) || 0);
     });
     res.json(profiles);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ─── ROUTE: AUTO LOGIN ────────────────────────────────────────
+
+// ─── ROUTE: AUTO LOGIN ─────────────────────────────────────────
 app.post('/api/autologin', async (req, res) => {
   const { accountId } = req.body;
   const db  = readDB();
@@ -345,12 +339,99 @@ app.post('/api/autologin', async (req, res) => {
       db.accounts[idx].status    = 'online';
       db.accounts[idx].lastLogin = new Date().toISOString();
     }
-    db.history.unshift({ accountId: acc.id, accountName: acc.name, action: result.ok ? 'autologin' : 'autologin_fail', color: acc.color, time: new Date().toISOString() });
+    db.history.unshift({
+      accountId  : acc.id,
+      accountName: acc.name,
+      action     : result.ok ? 'autologin' : 'autologin_fail',
+      color      : acc.color,
+      time       : new Date().toISOString(),
+    });
     if (db.history.length > 300) db.history.splice(300);
     writeDB(db);
     res.json(result);
-  } catch (err) { res.status(500).json({ ok: false, message: err.message }); }
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
 });
+
+
+// ─── ROUTE: SCHEDULER ─────────────────────────────────────────
+app.get('/api/scheduler/:id', (req, res) => {
+  res.json(scheduler.getStatus(Number(req.params.id)));
+});
+
+app.get('/api/scheduler', (req, res) => {
+  res.json(scheduler.getAllStatus());
+});
+
+app.post('/api/scheduler/:id', (req, res) => {
+  const accountId = Number(req.params.id);
+  const config    = req.body;
+  if (typeof config.enabled === 'undefined') {
+    return res.status(400).json({ error: 'Thiếu trường enabled' });
+  }
+  scheduler.setSchedule(accountId, config);
+  const db  = readDB();
+  const idx = db.accounts.findIndex(a => a.id === accountId);
+  if (idx !== -1) {
+    db.accounts[idx].schedulerConfig = config;
+    writeDB(db);
+  }
+  res.json({ ok: true, message: config.enabled ? 'Đã bật lịch tự động' : 'Đã tắt lịch' });
+});
+
+app.delete('/api/scheduler/:id', (req, res) => {
+  scheduler.removeSchedule(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+
+// ─── ROUTE: SESSIONS ──────────────────────────────────────────
+app.get('/api/sessions', (req, res) => {
+  const active = getActiveSessions();
+  res.json({ activeSessions: active });
+});
+
+
+// ─── SCHEDULER CALLBACK ───────────────────────────────────────
+// Gán callback TRƯỚC khi restore
+scheduler.onTick = async (accountId, config) => {
+  const db  = readDB();
+  const acc = db.accounts.find(a => a.id === Number(accountId));
+  if (!acc) return;
+
+  const result = await autoLogin(acc, db.settings);
+
+  db.history.unshift({
+    accountId  : acc.id,
+    accountName: acc.name,
+    action     : 'scheduler_open',
+    color      : acc.color,
+    time       : new Date().toISOString(),
+  });
+  if (db.history.length > 300) db.history.splice(300);
+
+  if (result.ok) {
+    const idx = db.accounts.findIndex(a => a.id === Number(accountId));
+    db.accounts[idx].status    = 'online';
+    db.accounts[idx].lastLogin = new Date().toISOString();
+  }
+  writeDB(db);
+};
+
+// Restore scheduler SAU khi gán callback
+(function restoreSchedulers() {
+  try {
+    const db = readDB();
+    db.accounts.forEach(acc => {
+      if (acc.schedulerConfig?.enabled) {
+        scheduler.setSchedule(acc.id, acc.schedulerConfig);
+        console.log(`  ♻️  Restored scheduler: ${acc.name}`);
+      }
+    });
+  } catch {}
+})();
+
 
 // ─── START ────────────────────────────────────────────────────
 app.listen(PORT, () => {

@@ -1,7 +1,7 @@
 {
   "name": "fb-account-manager",
-  "version": "2.0.0",
-  "description": "FB Account Manager - lưu dữ liệu JSON + mở Chrome Profile",
+  "version": "3.0.0",
+  "description": "FB Account Manager - Phase 1: Puppeteer Stealth + Scheduler",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
@@ -10,7 +10,10 @@
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "puppeteer-core": "^22.0.0"
+    "puppeteer-core": "^22.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "node-cron": "^3.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

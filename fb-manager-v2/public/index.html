@@ -6,15 +6,21 @@
   <title>FB Account Manager</title>
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
+  <style>
+    .day-btn{padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg-primary);color:var(--text-secondary);cursor:pointer;font-size:12px;font-weight:500;transition:all 0.15s}
+    .day-btn.active{background:var(--accent);color:white;border-color:var(--accent)}
+    .day-btn:hover:not(.active){background:var(--bg-tertiary)}
+  </style>
 </head>
 <body>
+
 <div class="app-layout">
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">f</div>
-      <div><div class="logo-title">FB Manager</div><div class="logo-sub">v2.0 — Node.js</div></div>
+      <div><div class="logo-title">FB Manager</div><div class="logo-sub">v3.0 — Node.js</div></div>
     </div>
     <nav class="sidebar-nav">
       <button class="nav-item active" onclick="showPage('accounts',this)">
@@ -150,8 +156,7 @@
             <div class="info-box">
               <b>Windows:</b> <code>C:\Program Files\Google\Chrome\Application\chrome.exe</code><br>
               <b>macOS:</b> <code>/Applications/Google Chrome.app/Contents/MacOS/Google Chrome</code><br>
-              <b>Linux:</b> <code>/usr/bin/google-chrome</code><br><br>
-              Mỗi tài khoản sẽ mở <b>đúng Profile Directory</b> được gán (VD: "Profile 1", "Profile 2"...) — mỗi profile là một thẻ Chrome riêng biệt, không dùng chung cookies.
+              <b>Linux:</b> <code>/usr/bin/google-chrome</code>
             </div>
           </div>
           <div class="settings-row">
@@ -201,6 +206,10 @@
 
   </main>
 </div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODALS — đặt ngoài .app-layout, trước </body>  -->
+<!-- ═══════════════════════════════════════════════ -->
 
 <!-- MODAL: TÀI KHOẢN -->
 <div id="accountModal" class="modal-overlay">
@@ -304,11 +313,6 @@
   </div>
 </div>
 
-<script src="js/api.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/accounts.js"></script>
-<script src="js/pages.js"></script>
-
 <!-- MODAL: CHROME PROFILE PICKER -->
 <div id="profilePickerModal" class="modal-overlay">
   <div class="modal" style="max-width:520px">
@@ -326,5 +330,76 @@
   </div>
 </div>
 
+<!-- MODAL: SCHEDULER -->
+<div id="schedulerModal" class="modal-overlay">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title" id="schedulerTitle">⏰ Lịch tự động</div>
+      <button class="modal-close" onclick="Accounts.closeScheduler()">✕</button>
+    </div>
+
+    <!-- Bật/tắt -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:14px">
+      <div>
+        <div style="font-size:13px;font-weight:600">Bật lịch tự động</div>
+        <div style="font-size:11px;color:var(--text-muted)">Tự động mở Facebook theo lịch đặt sẵn</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="schEnabled">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <!-- Ngày trong tuần -->
+    <div class="form-group">
+      <label class="form-label">Ngày hoạt động</label>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="day-btn active" data-day="1" onclick="Accounts.toggleDay(this)">T2</button>
+        <button class="day-btn active" data-day="2" onclick="Accounts.toggleDay(this)">T3</button>
+        <button class="day-btn active" data-day="3" onclick="Accounts.toggleDay(this)">T4</button>
+        <button class="day-btn active" data-day="4" onclick="Accounts.toggleDay(this)">T5</button>
+        <button class="day-btn active" data-day="5" onclick="Accounts.toggleDay(this)">T6</button>
+        <button class="day-btn" data-day="6" onclick="Accounts.toggleDay(this)">T7</button>
+        <button class="day-btn" data-day="0" onclick="Accounts.toggleDay(this)">CN</button>
+      </div>
+    </div>
+
+    <!-- Khung giờ -->
+    <div class="form-group">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label class="form-label" style="margin:0">Khung giờ hoạt động</label>
+        <button class="btn btn-outline btn-sm" onclick="Accounts.addTimeRange()">+ Thêm khung</button>
+      </div>
+      <div id="timeRanges"></div>
+    </div>
+
+    <!-- Tần suất -->
+    <div class="form-group">
+      <label class="form-label">Tần suất mở lại</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="range" min="10" max="120" step="5" id="schInterval" style="flex:1"
+          oninput="document.getElementById('schIntervalVal').textContent=this.value+' phút'">
+        <span id="schIntervalVal" style="font-size:13px;color:var(--text-secondary);min-width:60px">30 phút</span>
+      </div>
+      <div class="form-hint">Mở lại sau mỗi X phút trong khung giờ đã chọn</div>
+    </div>
+
+    <!-- Logs -->
+    <div class="form-group">
+      <label class="form-label">Log hoạt động gần đây</label>
+      <div id="schedulerLogs" style="background:var(--bg-tertiary);border-radius:var(--radius-md);padding:8px 10px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:11px"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Accounts.closeScheduler()">Hủy</button>
+      <button class="btn btn-primary" onclick="Accounts.saveScheduler()">💾 Lưu lịch</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/accounts.js"></script>
+<script src="js/pages.js"></script>
 </body>
 </html>

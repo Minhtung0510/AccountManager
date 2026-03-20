@@ -3,7 +3,7 @@
     {
       "id": 1,
       "status": "online",
-      "lastLogin": "2026-03-19T15:18:31.642Z",
+      "lastLogin": "2026-03-20T01:34:00.026Z",
       "name": "Tùng",
       "email": "tungnmph30979@fpt.edu.vn",
       "password": "Minhtug0510",
@@ -13,7 +13,32 @@
       "profileDir": "Profile 2",
       "notes": "",
       "color": "#ef4444",
-      "groupId": null
+      "groupId": null,
+      "schedulerConfig": {
+        "enabled": true,
+        "intervalMinutes": 60,
+        "daysOfWeek": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "timeRanges": [
+          {
+            "from": "09:00",
+            "to": "11:00"
+          },
+          {
+            "from": "14:00",
+            "to": "17:00"
+          },
+          {
+            "from": "20:00",
+            "to": "22:00"
+          }
+        ]
+      }
     }
   ],
   "groups": [
@@ -30,7 +55,50 @@
       "color": "#22c55e"
     }
   ],
-  "history": [],
+  "history": [
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T01:34:00.026Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T01:33:00.025Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T01:32:09.486Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_open",
+      "color": "#ef4444",
+      "time": "2026-03-20T01:32:00.022Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T01:04:10.086Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "autologin",
+      "color": "#ef4444",
+      "time": "2026-03-20T01:03:58.718Z"
+    }
+  ],
   "settings": {
     "theme": "light",
     "openDelay": 500,

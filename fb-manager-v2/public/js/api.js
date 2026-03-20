@@ -5,10 +5,7 @@ const API_BASE = 'http://localhost:3000/api';
 const API = {
 
   async _fetch(method, path, body) {
-    const opts = {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-    };
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
     if (body !== undefined) opts.body = JSON.stringify(body);
     try {
       const res = await fetch(API_BASE + path, opts);
@@ -48,8 +45,17 @@ const API = {
   // Auto login
   autoLogin(id)           { return this._fetch('POST', '/autologin', { accountId: id }); },
 
-  // Quét Chrome Profiles trên máy
+  // Chrome profiles
   getChromeProfiles()     { return this._fetch('GET',  '/chrome-profiles'); },
+
+  // Scheduler
+  getScheduler(id)        { return this._fetch('GET',    `/scheduler/${id}`); },
+  getAllSchedulers()       { return this._fetch('GET',    '/scheduler'); },
+  setScheduler(id, cfg)   { return this._fetch('POST',   `/scheduler/${id}`, cfg); },
+  removeScheduler(id)     { return this._fetch('DELETE', `/scheduler/${id}`); },
+
+  // Sessions
+  getSessions()           { return this._fetch('GET',  '/sessions'); },
 
   // Export / Import
   exportJSON() { window.open(API_BASE + '/export', '_blank'); },
