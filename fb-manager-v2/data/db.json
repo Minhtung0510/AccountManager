@@ -26,13 +26,15 @@
         ],
         "timeRanges": [
           {
-            "from": "14:25",
+            "from": "14:55",
             "to": "16:45"
           }
         ],
         "behaviorEnabled": true,
         "behaviorConfig": {
-          "geminiApiKey": "AIzaSyA5T-IM0kqRdDA4KqAsrvN8uGkdxA52z9w",
+          "aiProvider": "gemini",
+          "aiApiKey": "AIzaSyDo0yeJXIbElDHvcyAhsEydHhtK2ugnaIw",
+          "geminiApiKey": "AIzaSyDo0yeJXIbElDHvcyAhsEydHhtK2ugnaIw",
           "durationMinutes": 360,
           "reactionRate": 80,
           "readTimeMin": 3000,
@@ -60,7 +62,7 @@
       "groupId": null,
       "schedulerConfig": {
         "enabled": true,
-        "intervalMinutes": 30,
+        "intervalMinutes": 10,
         "daysOfWeek": [
           1,
           2,
@@ -70,13 +72,15 @@
         ],
         "timeRanges": [
           {
-            "from": "14:25",
+            "from": "14:55",
             "to": "16:45"
           }
         ],
         "behaviorEnabled": true,
         "behaviorConfig": {
-          "geminiApiKey": "AIzaSyA5T-IM0kqRdDA4KqAsrvN8uGkdxA52z9w",
+          "aiProvider": "groq",
+          "aiApiKey": "xai-g0ChWRsZpT2xmk7O6NTZ8uUTn5JPsL9s5t4KwG9kuFtxSViItJNCGoFUnZNj4nyT0aZlzcqlvN0uQ9JK",
+          "groqApiKey": "xai-g0ChWRsZpT2xmk7O6NTZ8uUTn5JPsL9s5t4KwG9kuFtxSViItJNCGoFUnZNj4nyT0aZlzcqlvN0uQ9JK",
           "durationMinutes": 360,
           "reactionRate": 80,
           "readTimeMin": 3000,
@@ -188,6 +192,9 @@
     "defaultBrowser": "Chrome",
     "autoStatus": true,
     "chromePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-    "geminiApiKey": "AIzaSyA5T-IM0kqRdDA4KqAsrvN8uGkdxA52z9w"
+    "geminiApiKey": "AIzaSyDo0yeJXIbElDHvcyAhsEydHhtK2ugnaIw",
+    "aiProvider": "gemini",
+    "openaiApiKey": "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",
+    "groqApiKey": "xai-g0ChWRsZpT2xmk7O6NTZ8uUTn5JPsL9s5t4KwG9kuFtxSViItJNCGoFUnZNj4nyT0aZlzcqlvN0uQ9JK"
   }
 }

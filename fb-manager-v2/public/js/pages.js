@@ -115,13 +115,27 @@ const Settings = {
   async load() {
     const s  = await API.getSettings();
     const el = id => Utils.qs('#'+id);
-    if(el('sAutoStatus'))    el('sAutoStatus').checked      = s.autoStatus !== false;
-    if(el('sOpenDelay'))     el('sOpenDelay').value         = s.openDelay || 500;
+
+    if(el('sAutoStatus'))    el('sAutoStatus').checked       = s.autoStatus !== false;
+    if(el('sOpenDelay'))     el('sOpenDelay').value          = s.openDelay || 500;
     if(el('sOpenDelayVal'))  el('sOpenDelayVal').textContent = (s.openDelay||500)+'ms';
-    if(el('sDefaultBrowser'))el('sDefaultBrowser').value   = s.defaultBrowser || 'Chrome';
-    if(el('sTheme'))         el('sTheme').value             = s.theme || 'light';
-    if(el('sChromePath'))    el('sChromePath').value        = s.chromePath || '';
-    if(el('sGeminiKey'))     el('sGeminiKey').value         = s.geminiApiKey || '';
+    if(el('sDefaultBrowser'))el('sDefaultBrowser').value    = s.defaultBrowser || 'Chrome';
+    if(el('sTheme'))         el('sTheme').value              = s.theme || 'light';
+    if(el('sChromePath'))    el('sChromePath').value         = s.chromePath || '';
+
+    // AI providers
+    const provider = s.aiProvider || 'gemini';
+    if(el('sAiProvider')) { el('sAiProvider').value = provider; this.onProviderChange(); }
+    if(el('sGeminiKey'))  el('sGeminiKey').value  = s.geminiApiKey  || '';
+    if(el('sGroqKey'))    el('sGroqKey').value    = s.groqApiKey    || '';
+    if(el('sOpenaiKey'))  el('sOpenaiKey').value  = s.openaiApiKey  || '';
+  },
+
+  // Hiện tất cả 3 rows để user có thể nhập nhiều key cùng lúc
+  onProviderChange() {
+    const p = Utils.qs('#sAiProvider')?.value || 'gemini';
+    // Lưu provider mặc định ngay khi đổi
+    API.saveSettings({ aiProvider: p }).catch(() => {});
   },
 
   async save(key, value) {

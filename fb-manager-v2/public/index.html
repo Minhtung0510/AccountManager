@@ -127,27 +127,63 @@
       <div class="page-header">
         <div><h1 class="page-title">Cài đặt</h1><p class="page-desc">Tùy chỉnh hệ thống</p></div>
       </div>
-     
       <div class="settings-container">
-           <div class="settings-section">
-  <div class="settings-section-title">🤖 AI — Gemini</div>
-  <div class="settings-row">
-    <div>
-      <div class="settings-row-label">Gemini API Key</div>
-      <div class="settings-row-desc">Dùng để phân tích nội dung và thả cảm xúc thông minh</div>
-    </div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <input class="form-input" id="sGeminiKey" type="password" style="width:220px;font-size:12px" placeholder="AIzaSy...">
-      <button class="btn btn-outline btn-sm" onclick="Settings.save('geminiApiKey',document.getElementById('sGeminiKey').value)">Lưu</button>
-    </div>
-  </div>
-  <div style="padding:0 16px 14px">
-    <div class="info-box">
-      Lấy API key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a><br>
-      Model đang dùng: <b>gemini-1.5-flash</b> (miễn phí, nhanh)
-    </div>
-  </div>
-</div>
+
+        <!-- ── AI PROVIDER ── -->
+        <div class="settings-section">
+          <div class="settings-section-title">🤖 AI Provider</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Provider mặc định</div>
+              <div class="settings-row-desc">Áp dụng khi tài khoản chưa cài riêng</div>
+            </div>
+            <select class="filter-select" id="sAiProvider" onchange="Settings.onProviderChange()">
+              <option value="gemini">Gemini (Google) — Miễn phí</option>
+              <option value="groq">Groq — Miễn phí, rất nhanh</option>
+              <option value="openai">OpenAI — Trả phí / Free tier</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Gemini API Key</div>
+              <div class="settings-row-desc">Lấy miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a></div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input class="form-input" id="sGeminiKey" type="password" style="width:220px;font-size:12px" placeholder="AIzaSy...">
+              <button class="btn btn-outline btn-sm" onclick="Settings.save('geminiApiKey', document.getElementById('sGeminiKey').value)">Lưu</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Groq API Key</div>
+              <div class="settings-row-desc">Lấy miễn phí tại <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com</a> — 30 req/phút</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input class="form-input" id="sGroqKey" type="password" style="width:220px;font-size:12px" placeholder="gsk_...">
+              <button class="btn btn-outline btn-sm" onclick="Settings.save('groqApiKey', document.getElementById('sGroqKey').value)">Lưu</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">OpenAI API Key</div>
+              <div class="settings-row-desc">⚠️ Free tier giới hạn 3 req/phút — khuyên dùng Groq</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input class="form-input" id="sOpenaiKey" type="password" style="width:220px;font-size:12px" placeholder="sk-...">
+              <button class="btn btn-outline btn-sm" onclick="Settings.save('openaiApiKey', document.getElementById('sOpenaiKey').value)">Lưu</button>
+            </div>
+          </div>
+          <div style="padding:0 16px 14px">
+            <div class="info-box">
+              🟢 <b>Gemini</b> — gemini-2.0-flash, tốt nhất tiếng Việt<br>
+              🟢 <b>Groq</b> — llama3-8b, 30 req/phút, cực nhanh<br>
+              🟡 <b>OpenAI</b> — gpt-3.5-turbo, free chỉ 3 req/phút<br><br>
+              💡 Mỗi tài khoản có thể chọn provider riêng khi bật giả lập.
+            </div>
+          </div>
+        </div>
+
+        <!-- ── GIAO DIỆN ── -->
         <div class="settings-section">
           <div class="settings-section-title">Giao diện</div>
           <div class="settings-row">
@@ -159,6 +195,7 @@
           </div>
         </div>
 
+        <!-- ── MỞ CHROME ── -->
         <div class="settings-section">
           <div class="settings-section-title">Mở Chrome</div>
           <div class="settings-row">
@@ -208,6 +245,7 @@
           </div>
         </div>
 
+        <!-- ── DỮ LIỆU ── -->
         <div class="settings-section">
           <div class="settings-section-title">Dữ liệu (lưu tại data/db.json)</div>
           <div class="settings-row">
@@ -227,7 +265,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ -->
-<!-- MODALS — đặt ngoài .app-layout, trước </body>  -->
+<!-- MODALS                                          -->
 <!-- ═══════════════════════════════════════════════ -->
 
 <!-- MODAL: TÀI KHOẢN -->
@@ -279,7 +317,7 @@
           <input class="form-input" id="fProfile" placeholder="Profile 1" style="flex:1">
           <button type="button" class="btn btn-outline" onclick="Accounts.openProfilePicker()">🔍 Chọn</button>
         </div>
-        <div class="form-hint">VD: Profile 1, Profile 2... (mỗi profile = 1 thẻ Chrome riêng)</div>
+        <div class="form-hint">VD: Profile 1, Profile 2...</div>
       </div>
     </div>
     <div class="form-row">
@@ -356,20 +394,13 @@
       <div class="modal-title" id="schedulerTitle">⏰ Lịch tự động</div>
       <button class="modal-close" onclick="Accounts.closeScheduler()">✕</button>
     </div>
- 
-    <!-- Bật/tắt -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:14px">
       <div>
         <div style="font-size:13px;font-weight:600">Bật lịch tự động</div>
         <div style="font-size:11px;color:var(--text-muted)">Tự động mở Facebook theo lịch đặt sẵn</div>
       </div>
-      <label class="toggle">
-        <input type="checkbox" id="schEnabled">
-        <span class="toggle-slider"></span>
-      </label>
+      <label class="toggle"><input type="checkbox" id="schEnabled"><span class="toggle-slider"></span></label>
     </div>
- 
-    <!-- Ngày trong tuần -->
     <div class="form-group">
       <label class="form-label">Ngày hoạt động</label>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
@@ -382,8 +413,6 @@
         <button class="day-btn" data-day="0" onclick="Accounts.toggleDay(this)">CN</button>
       </div>
     </div>
- 
-    <!-- Khung giờ -->
     <div class="form-group">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <label class="form-label" style="margin:0">Khung giờ hoạt động</label>
@@ -391,8 +420,6 @@
       </div>
       <div id="timeRanges"></div>
     </div>
- 
-    <!-- Tần suất -->
     <div class="form-group">
       <label class="form-label">Tần suất mở lại</label>
       <div style="display:flex;align-items:center;gap:10px">
@@ -400,10 +427,7 @@
           oninput="document.getElementById('schIntervalVal').textContent=this.value+' phút'">
         <span id="schIntervalVal" style="font-size:13px;color:var(--text-secondary);min-width:60px">30 phút</span>
       </div>
-      <div class="form-hint">Mở lại sau mỗi X phút trong khung giờ đã chọn</div>
     </div>
- 
-    <!-- Kết hợp giả lập hành vi -->
     <div class="form-group">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border)">
         <div>
@@ -415,84 +439,74 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
- 
-      <!-- Cấu hình behavior đầy đủ -->
+
       <div id="schBehaviorConfig" style="display:none;background:var(--bg-tertiary);border-radius:var(--radius-md);padding:12px;margin-top:8px">
- 
-        <!-- Gemini API Key -->
+
+        <!-- AI Provider -->
         <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🤖 AI Provider</div>
+          <select class="form-select" id="schAiProvider" onchange="Accounts.onSchProviderChange()" style="font-size:12px">
+            <option value="gemini">Gemini (Google) — Miễn phí</option>
+            <option value="groq">Groq — Miễn phí, rất nhanh</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </div>
+
+        <!-- Gemini Key -->
+        <div style="margin-bottom:10px" id="schGeminiGroup">
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔑 Gemini API Key</div>
           <div class="password-wrap">
             <input class="form-input" id="schGeminiKey" type="password" placeholder="AIzaSy..." style="font-size:12px">
-            <button class="toggle-pass" type="button"
-              onclick="const f=document.getElementById('schGeminiKey');f.type=f.type==='password'?'text':'password'">👁</button>
+            <button class="toggle-pass" type="button" onclick="const f=document.getElementById('schGeminiKey');f.type=f.type==='password'?'text':'password'">👁</button>
           </div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">
-            Lấy miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a>
-          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Lấy miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a></div>
         </div>
- 
+
+        <!-- Groq Key -->
+        <div style="margin-bottom:10px;display:none" id="schGroqGroup">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔑 Groq API Key</div>
+          <div class="password-wrap">
+            <input class="form-input" id="schGroqKey" type="password" placeholder="gsk_..." style="font-size:12px">
+            <button class="toggle-pass" type="button" onclick="const f=document.getElementById('schGroqKey');f.type=f.type==='password'?'text':'password'">👁</button>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Lấy miễn phí tại <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com</a></div>
+        </div>
+
+        <!-- OpenAI Key -->
+        <div style="margin-bottom:10px;display:none" id="schOpenaiGroup">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔑 OpenAI API Key</div>
+          <div class="password-wrap">
+            <input class="form-input" id="schOpenaiKey" type="password" placeholder="sk-..." style="font-size:12px">
+            <button class="toggle-pass" type="button" onclick="const f=document.getElementById('schOpenaiKey');f.type=f.type==='password'?'text':'password'">👁</button>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">⚠️ Free tier giới hạn thấp</div>
+        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <!-- Thời gian chạy -->
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏱ Thời gian chạy (phút)</div>
-            <input type="number" class="form-input" id="schBhDuration" value="10" min="5" max="120" style="font-size:12px">
-          </div>
-          <!-- Tỉ lệ thả cảm xúc -->
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">❤️ Tỉ lệ thả cảm xúc (%)</div>
-            <input type="number" class="form-input" id="schBhRate" value="40" min="10" max="80" style="font-size:12px">
-          </div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏱ Thời gian chạy (phút)</div><input type="number" class="form-input" id="schBhDuration" value="10" min="5" max="120" style="font-size:12px"></div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">❤️ Tỉ lệ thả cảm xúc (%)</div><input type="number" class="form-input" id="schBhRate" value="40" min="10" max="80" style="font-size:12px"></div>
         </div>
- 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <!-- Thời gian đọc bài -->
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">👁 Đọc bài tối thiểu (ms)</div>
-            <input type="number" class="form-input" id="schBhReadMin" value="800" min="300" max="5000" step="100" style="font-size:12px">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">👁 Đọc bài tối đa (ms)</div>
-            <input type="number" class="form-input" id="schBhReadMax" value="3000" min="1000" max="15000" step="100" style="font-size:12px">
-          </div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">👁 Đọc bài tối thiểu (ms)</div><input type="number" class="form-input" id="schBhReadMin" value="800" min="300" max="5000" step="100" style="font-size:12px"></div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">👁 Đọc bài tối đa (ms)</div><input type="number" class="form-input" id="schBhReadMax" value="3000" min="1000" max="15000" step="100" style="font-size:12px"></div>
         </div>
- 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <!-- Bài hot -->
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔥 Bài hot tối thiểu (ms)</div>
-            <input type="number" class="form-input" id="schBhHotMin" value="3000" min="1000" max="15000" step="500" style="font-size:12px">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔥 Bài hot tối đa (ms)</div>
-            <input type="number" class="form-input" id="schBhHotMax" value="8000" min="3000" max="30000" step="500" style="font-size:12px">
-          </div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔥 Bài hot tối thiểu (ms)</div><input type="number" class="form-input" id="schBhHotMin" value="3000" min="1000" max="15000" step="500" style="font-size:12px"></div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔥 Bài hot tối đa (ms)</div><input type="number" class="form-input" id="schBhHotMax" value="8000" min="3000" max="30000" step="500" style="font-size:12px"></div>
         </div>
- 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <!-- Pause giữa các loop -->
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏸ Nghỉ giữa loop tối thiểu (ms)</div>
-            <input type="number" class="form-input" id="schBhPauseMin" value="500" min="200" max="5000" step="100" style="font-size:12px">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏸ Nghỉ giữa loop tối đa (ms)</div>
-            <input type="number" class="form-input" id="schBhPauseMax" value="1500" min="500" max="10000" step="100" style="font-size:12px">
-          </div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏸ Nghỉ tối thiểu (ms)</div><input type="number" class="form-input" id="schBhPauseMin" value="500" min="200" max="5000" step="100" style="font-size:12px"></div>
+          <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏸ Nghỉ tối đa (ms)</div><input type="number" class="form-input" id="schBhPauseMax" value="1500" min="500" max="10000" step="100" style="font-size:12px"></div>
         </div>
- 
         <div style="margin-top:8px;padding:8px;background:var(--accent-light);border-radius:var(--radius-sm);font-size:11px;color:var(--accent)">
-          💡 Cần Gemini API Key để AI phân tích cảm xúc. Không có vẫn chạy được nhưng cảm xúc random.
+          💡 Mỗi tài khoản có thể dùng provider khác nhau chạy song song.
         </div>
       </div>
     </div>
- 
-    <!-- Logs -->
     <div class="form-group">
       <label class="form-label">Log hoạt động gần đây</label>
       <div id="schedulerLogs" style="background:var(--bg-tertiary);border-radius:var(--radius-md);padding:8px 10px;max-height:100px;overflow-y:auto;font-family:monospace;font-size:11px"></div>
     </div>
- 
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="Accounts.closeScheduler()">Hủy</button>
       <button class="btn btn-primary" onclick="Accounts.saveScheduler()">💾 Lưu lịch</button>
@@ -500,27 +514,54 @@
   </div>
 </div>
 
-<!-- MODAL: BEHAVIOR (Giả lập hành vi) -->
+<!-- MODAL: BEHAVIOR -->
 <div id="behaviorModal" class="modal-overlay">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
       <div class="modal-title" id="behaviorTitle">🤖 Giả lập hành vi</div>
       <button class="modal-close" onclick="Accounts.closeBehavior()">✕</button>
     </div>
- 
-    <!-- Gemini API Key -->
+
+    <!-- AI Provider -->
     <div class="form-group">
+      <label class="form-label">🤖 AI Provider</label>
+      <select class="form-select" id="bhAiProvider" onchange="Accounts.onBhProviderChange()">
+        <option value="gemini">Gemini (Google) — Miễn phí</option>
+        <option value="groq">Groq — Miễn phí, rất nhanh</option>
+        <option value="openai">OpenAI</option>
+      </select>
+    </div>
+
+    <!-- Gemini Key -->
+    <div class="form-group" id="bhGeminiGroup">
       <label class="form-label">🔑 Gemini API Key</label>
       <div class="password-wrap">
         <input class="form-input" id="bhGeminiKey" type="password" placeholder="AIzaSy...">
-        <button class="toggle-pass" type="button"
-          onclick="const f=document.getElementById('bhGeminiKey');f.type=f.type==='password'?'text':'password'">👁</button>
+        <button class="toggle-pass" type="button" onclick="const f=document.getElementById('bhGeminiKey');f.type=f.type==='password'?'text':'password'">👁</button>
       </div>
-      <div class="form-hint">
-        Lấy miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a>
-      </div>
+      <div class="form-hint">Lấy miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a></div>
     </div>
- 
+
+    <!-- Groq Key -->
+    <div class="form-group" id="bhGroqGroup" style="display:none">
+      <label class="form-label">🔑 Groq API Key</label>
+      <div class="password-wrap">
+        <input class="form-input" id="bhGroqKey" type="password" placeholder="gsk_...">
+        <button class="toggle-pass" type="button" onclick="const f=document.getElementById('bhGroqKey');f.type=f.type==='password'?'text':'password'">👁</button>
+      </div>
+      <div class="form-hint">Lấy miễn phí tại <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com</a> — 30 req/phút free</div>
+    </div>
+
+    <!-- OpenAI Key -->
+    <div class="form-group" id="bhOpenaiGroup" style="display:none">
+      <label class="form-label">🔑 OpenAI API Key</label>
+      <div class="password-wrap">
+        <input class="form-input" id="bhOpenaiKey" type="password" placeholder="sk-...">
+        <button class="toggle-pass" type="button" onclick="const f=document.getElementById('bhOpenaiKey');f.type=f.type==='password'?'text':'password'">👁</button>
+      </div>
+      <div class="form-hint">⚠️ Free tier chỉ 3 req/phút — nên dùng Groq thay thế</div>
+    </div>
+
     <!-- Thời gian chạy -->
     <div class="form-group">
       <label class="form-label">⏱ Thời gian chạy</label>
@@ -530,7 +571,7 @@
         <span id="bhDurationVal" style="font-size:13px;color:var(--text-secondary);min-width:60px">10 phút</span>
       </div>
     </div>
- 
+
     <!-- Tỉ lệ thả cảm xúc -->
     <div class="form-group">
       <label class="form-label">❤️ Tỉ lệ thả cảm xúc</label>
@@ -541,7 +582,7 @@
       </div>
       <div class="form-hint">% bài viết được thả cảm xúc (khuyên 30-50%)</div>
     </div>
- 
+
     <!-- Thời gian đọc bài -->
     <div class="form-group">
       <label class="form-label">👁 Thời gian đọc mỗi bài</label>
@@ -557,13 +598,12 @@
       </div>
       <div class="form-hint">Bài hot sẽ dừng lâu hơn (15-45 giây tự động)</div>
     </div>
- 
-    <!-- Info box -->
+
     <div class="info-box" style="margin-bottom:14px">
-      <b>⚠️ Lưu ý:</b> Cần bấm <b>"⚡ Mở Facebook"</b> trước để Chrome đang chạy, sau đó mới chạy giả lập được.<br><br>
-      🤖 Gemini AI sẽ đọc nội dung từng bài và tự động chọn cảm xúc phù hợp (Like/Haha/Wow/Buồn/Phẫn nộ).
+      <b>⚠️ Lưu ý:</b> Cần bấm <b>"⚡ Mở Facebook"</b> trước để Chrome đang chạy.<br><br>
+      💡 Mỗi tài khoản chạy AI provider riêng — có thể chạy song song nhiều profile cùng lúc.
     </div>
- 
+
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="Accounts.closeBehavior()">Hủy</button>
       <button class="btn btn-primary" onclick="Accounts.startBehavior()">🤖 Bắt đầu giả lập</button>

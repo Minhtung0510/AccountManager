@@ -1,5 +1,5 @@
 // server/index.js — Express backend
-
+require('dotenv').config();
 const {
   autoLogin, autoLoginMany,
   closeChrome, closeManyChrome, closeAllChrome,
@@ -50,12 +50,16 @@ function writeDB(data) {
 
 function getDefaultDB() {
   return {
-    accounts: [],
-    groups  : [],
-    history : [],
-    settings: {
-      theme: 'light', openDelay: 500, defaultBrowser: 'Chrome',
-      autoStatus: true, chromePath: getDefaultChromePath(),
+   ttings: {
+      theme          : 'light',
+      openDelay      : 500,
+      defaultBrowser : 'Chrome',
+      autoStatus     : true,
+      chromePath     : getDefaultChromePath(),
+      // Đọc từ .env nếu db chưa có
+      geminiApiKey   : process.env.GEMINI_API_KEY  || '',
+      groqApiKey     : process.env.GROQ_API_KEY    || '',
+      openaiApiKey   : process.env.OPENAI_API_KEY  || '', 
     }
   };
 }

@@ -23,7 +23,6 @@ const Accounts = {
     }
   },
 
-  // Poll trạng thái behavior mỗi 5 giây
   _startStatusPolling() {
     setInterval(async () => {
       try {
@@ -91,6 +90,7 @@ const Accounts = {
     const hasTimer   = !!a.schedulerConfig?.enabled;
     const isBehaving = !!this.behaviorStatuses[a.id]?.running;
     const bStats     = this.behaviorStatuses[a.id]?.stats;
+    const aiProvider = this.behaviorStatuses[a.id]?.aiProvider || '';
 
     return `
     <div class="account-card${sel?' selected':''}" id="card-${a.id}">
@@ -109,7 +109,7 @@ const Accounts = {
       </div>
     ${isBehaving && bStats ? `
       <div style="background:var(--accent-light);border-radius:var(--radius-md);padding:6px 8px;margin-bottom:8px;font-size:11px;color:var(--accent)">
-        🤖 Đang chạy
+        🤖 Đang chạy${aiProvider ? ` [${aiProvider.toUpperCase()}]` : ''}
         · 👁 ${bStats.postsViewed} bài
         · ❤️ ${bStats.postsReacted} cảm xúc
         ${bStats.adsSkipped ? `· 🚫 ${bStats.adsSkipped} QC` : ''}
@@ -141,6 +141,7 @@ const Accounts = {
   rowHTML(a) {
     const sel        = this.selected.has(a.id);
     const isBehaving = !!this.behaviorStatuses[a.id]?.running;
+    const aiProvider = this.behaviorStatuses[a.id]?.aiProvider || '';
     return `
     <div class="account-row${sel?' selected':''}">
       <input type="checkbox" style="accent-color:var(--accent)" ${sel?'checked':''} onchange="Accounts.toggleSel(${a.id})">
@@ -152,7 +153,7 @@ const Accounts = {
       <div class="row-actions">
         <button class="btn-icon" title="Mở Facebook" onclick="Accounts.autoLogin(${a.id})" style="color:#1877F2">⚡</button>
         ${isBehaving
-          ? `<button class="btn-icon" title="Dừng giả lập" onclick="Accounts.stopBehavior(${a.id})" style="color:var(--red)">⏹</button>`
+          ? `<button class="btn-icon" title="Dừng giả lập [${aiProvider.toUpperCase()}]" onclick="Accounts.stopBehavior(${a.id})" style="color:var(--red)">⏹</button>`
           : `<button class="btn-icon" title="Giả lập hành vi" onclick="Accounts.openBehavior(${a.id})">🤖</button>`
         }
         <button class="btn-icon" title="Lịch tự động" onclick="Accounts.openScheduler(${a.id})">⏰</button>
@@ -199,6 +200,58 @@ const Accounts = {
     await this.load();
   },
 
+  // ── AI PROVIDER HELPERS ──────────────────────────────────────
+
+  // Ẩn/hiện key input trong modal Behavior
+  onBhProviderChange() {
+    const p = Utils.qs('#bhAiProvider')?.value;
+    if (Utils.qs('#bhGeminiGroup')) Utils.qs('#bhGeminiGroup').style.display = p === 'gemini' ? '' : 'none';
+    if (Utils.qs('#bhGroqGroup'))   Utils.qs('#bhGroqGroup').style.display   = p === 'groq'   ? '' : 'none';
+    if (Utils.qs('#bhOpenaiGroup')) Utils.qs('#bhOpenaiGroup').style.display = p === 'openai' ? '' : 'none';
+  },
+
+  // Ẩn/hiện key input trong modal Scheduler
+  onSchProviderChange() {
+    const p = Utils.qs('#schAiProvider')?.value;
+    if (Utils.qs('#schGeminiGroup')) Utils.qs('#schGeminiGroup').style.display = p === 'gemini' ? '' : 'none';
+    if (Utils.qs('#schGroqGroup'))   Utils.qs('#schGroqGroup').style.display   = p === 'groq'   ? '' : 'none';
+    if (Utils.qs('#schOpenaiGroup')) Utils.qs('#schOpenaiGroup').style.display = p === 'openai' ? '' : 'none';
+  },
+
+  // Lấy API key đang nhập theo provider (modal Behavior)
+  _getBhApiKey() {
+    const p = Utils.qs('#bhAiProvider')?.value;
+    if (p === 'gemini') return Utils.qs('#bhGeminiKey')?.value?.trim() || '';
+    if (p === 'groq')   return Utils.qs('#bhGroqKey')?.value?.trim()   || '';
+    if (p === 'openai') return Utils.qs('#bhOpenaiKey')?.value?.trim() || '';
+    return '';
+  },
+
+  // Lấy API key đang nhập theo provider (modal Scheduler)
+  _getSchApiKey() {
+    const p = Utils.qs('#schAiProvider')?.value;
+    if (p === 'gemini') return Utils.qs('#schGeminiKey')?.value?.trim() || '';
+    if (p === 'groq')   return Utils.qs('#schGroqKey')?.value?.trim()   || '';
+    if (p === 'openai') return Utils.qs('#schOpenaiKey')?.value?.trim() || '';
+    return '';
+  },
+
+  // Điền key vào đúng field (modal Behavior)
+  _fillBhKey(provider, key) {
+    if (!key) return;
+    if (provider === 'gemini' && Utils.qs('#bhGeminiKey')) Utils.qs('#bhGeminiKey').value = key;
+    if (provider === 'groq'   && Utils.qs('#bhGroqKey'))   Utils.qs('#bhGroqKey').value   = key;
+    if (provider === 'openai' && Utils.qs('#bhOpenaiKey')) Utils.qs('#bhOpenaiKey').value = key;
+  },
+
+  // Điền key vào đúng field (modal Scheduler)
+  _fillSchKey(provider, key) {
+    if (!key) return;
+    if (provider === 'gemini' && Utils.qs('#schGeminiKey')) Utils.qs('#schGeminiKey').value = key;
+    if (provider === 'groq'   && Utils.qs('#schGroqKey'))   Utils.qs('#schGroqKey').value   = key;
+    if (provider === 'openai' && Utils.qs('#schOpenaiKey')) Utils.qs('#schOpenaiKey').value = key;
+  },
+
   // ── BEHAVIOR ─────────────────────────────────────────────────
   _behaviorId: null,
 
@@ -207,15 +260,25 @@ const Accounts = {
     const a = this.list.find(x => x.id === id);
     if (!a) return;
 
-    const modal = Utils.qs('#behaviorModal');
-    modal.classList.add('open');
+    Utils.qs('#behaviorModal').classList.add('open');
     Utils.qs('#behaviorTitle').textContent = `🤖 Giả lập hành vi — ${a.name}`;
 
-    // Load settings hiện tại
+    const bc       = a.schedulerConfig?.behaviorConfig || {};
     const settings = await API.getSettings();
-    if (settings.geminiApiKey) {
-      Utils.qs('#bhGeminiKey').value = settings.geminiApiKey;
+
+    // Xác định provider đã lưu: ưu tiên account > settings > mặc định gemini
+    const savedProvider = bc.aiProvider || settings.aiProvider || 'gemini';
+    if (Utils.qs('#bhAiProvider')) {
+      Utils.qs('#bhAiProvider').value = savedProvider;
+      this.onBhProviderChange();
     }
+
+    // Điền key tương ứng
+    const savedKey =
+      savedProvider === 'gemini' ? (bc.geminiApiKey || bc.aiApiKey || settings.geminiApiKey || '') :
+      savedProvider === 'groq'   ? (bc.groqApiKey   || bc.aiApiKey || settings.groqApiKey   || '') :
+      savedProvider === 'openai' ? (bc.openaiApiKey || bc.aiApiKey || settings.openaiApiKey || '') : '';
+    this._fillBhKey(savedProvider, savedKey);
   },
 
   closeBehavior() {
@@ -223,42 +286,47 @@ const Accounts = {
     this._behaviorId = null;
   },
 
- async startBehavior() {
+  async startBehavior() {
     const id = this._behaviorId;
     if (!id) return;
     const a = this.list.find(x => x.id === id);
     if (!a) return;
- 
-    // Lưu Gemini key nếu có
-    const geminiKey = Utils.qs('#bhGeminiKey').value.trim();
-    if (geminiKey) {
-      await API.saveSettings({ geminiApiKey: geminiKey });
+
+    const provider = Utils.qs('#bhAiProvider')?.value || 'gemini';
+    const apiKey   = this._getBhApiKey();
+
+    // Lưu key vào settings theo provider
+    if (apiKey) {
+      const keyField =
+        provider === 'gemini' ? 'geminiApiKey' :
+        provider === 'groq'   ? 'groqApiKey'   : 'openaiApiKey';
+      await API.saveSettings({ [keyField]: apiKey, aiProvider: provider });
     }
- 
+
     const config = {
-      durationMinutes: Number(Utils.qs('#bhDuration').value)    || 10,
-      reactionRate   : Number(Utils.qs('#bhReactionRate').value) || 40,
-      readTimeMin    : Number(Utils.qs('#bhReadMin').value)      || 3000,
-      readTimeMax    : Number(Utils.qs('#bhReadMax').value)      || 10000,
+      aiProvider     : provider,
+      aiApiKey       : apiKey,
+      geminiApiKey   : provider === 'gemini' ? apiKey : undefined,
+      groqApiKey     : provider === 'groq'   ? apiKey : undefined,
+      openaiApiKey   : provider === 'openai' ? apiKey : undefined,
+      durationMinutes: Number(Utils.qs('#bhDuration')?.value)      || 10,
+      reactionRate   : Number(Utils.qs('#bhReactionRate')?.value)  || 40,
+      readTimeMin    : Number(Utils.qs('#bhReadMin')?.value)       || 3000,
+      readTimeMax    : Number(Utils.qs('#bhReadMax')?.value)       || 10000,
     };
- 
-    // Đóng modal ngay để user thấy phản hồi
+
     this.closeBehavior();
-    Toast.info(`🤖 Đang mở Chrome để giả lập: ${a.name}...`);
- 
+    Toast.info(`🤖 Đang mở Chrome để giả lập: ${a.name} (${provider.toUpperCase()})...`);
+
     try {
       const res = await API.startBehavior(id, config);
-      if (res.ok) {
-        Toast.success(res.message);
-      } else {
-        Toast.error(res.message || 'Không thể bắt đầu giả lập');
-      }
+      if (res.ok) Toast.success(res.message);
+      else        Toast.error(res.message || 'Không thể bắt đầu giả lập');
       await this.load();
     } catch (err) {
       Toast.error('Lỗi server: ' + err.message);
     }
   },
- 
 
   async stopBehavior(id) {
     const a = this.list.find(x => x.id === id);
@@ -278,11 +346,11 @@ const Accounts = {
     this._schedulerId = id;
     const a = this.list.find(x => x.id === id);
     if (!a) return;
- 
+
     const modal = Utils.qs('#schedulerModal');
     modal.classList.add('open');
     Utils.qs('#schedulerTitle').textContent = `⏰ Lịch tự động — ${a.name}`;
- 
+
     const cfg = a.schedulerConfig || {
       enabled        : false,
       intervalMinutes: 30,
@@ -294,34 +362,42 @@ const Accounts = {
       behaviorEnabled: false,
       behaviorConfig : null,
     };
- 
+
     Utils.qs('#schEnabled').checked         = cfg.enabled;
     Utils.qs('#schInterval').value          = cfg.intervalMinutes || 30;
     Utils.qs('#schIntervalVal').textContent = (cfg.intervalMinutes || 30) + ' phút';
- 
+
     const days = cfg.daysOfWeek || [1,2,3,4,5];
     Utils.qsa('.day-btn').forEach(btn => {
       btn.classList.toggle('active', days.includes(Number(btn.dataset.day)));
     });
- 
+
     this._renderTimeRanges(cfg.timeRanges || []);
- 
-    // Bật/tắt behavior
+
     const bhEnabled = cfg.behaviorEnabled || false;
     const bhEl = Utils.qs('#schBehaviorEnabled');
     if (bhEl) {
       bhEl.checked = bhEnabled;
       this.toggleSchedulerBehavior(bhEnabled);
     }
- 
-    // Load toàn bộ behaviorConfig vào form
-    const bc = cfg.behaviorConfig || {};
+
+    const bc       = cfg.behaviorConfig || {};
     const settings = await API.getSettings();
- 
-    // Gemini key — ưu tiên từ behaviorConfig, fallback settings
-    const geminiKey = bc.geminiApiKey || settings.geminiApiKey || '';
-    if (Utils.qs('#schGeminiKey')) Utils.qs('#schGeminiKey').value = geminiKey;
- 
+
+    // Provider cho scheduler
+    const schProvider = bc.aiProvider || settings.aiProvider || 'gemini';
+    if (Utils.qs('#schAiProvider')) {
+      Utils.qs('#schAiProvider').value = schProvider;
+      this.onSchProviderChange();
+    }
+
+    // Điền key vào đúng field
+    const schKey =
+      schProvider === 'gemini' ? (bc.geminiApiKey || bc.aiApiKey || settings.geminiApiKey || '') :
+      schProvider === 'groq'   ? (bc.groqApiKey   || bc.aiApiKey || settings.groqApiKey   || '') :
+      schProvider === 'openai' ? (bc.openaiApiKey || bc.aiApiKey || settings.openaiApiKey || '') : '';
+    this._fillSchKey(schProvider, schKey);
+
     // Các tham số behavior
     if (Utils.qs('#schBhDuration')) Utils.qs('#schBhDuration').value  = bc.durationMinutes || 10;
     if (Utils.qs('#schBhRate'))     Utils.qs('#schBhRate').value      = bc.reactionRate    || 40;
@@ -331,7 +407,7 @@ const Accounts = {
     if (Utils.qs('#schBhHotMax'))   Utils.qs('#schBhHotMax').value    = bc.hotReadTimeMax  || 8000;
     if (Utils.qs('#schBhPauseMin')) Utils.qs('#schBhPauseMin').value  = bc.pauseMin        || 500;
     if (Utils.qs('#schBhPauseMax')) Utils.qs('#schBhPauseMax').value  = bc.pauseMax        || 1500;
- 
+
     // Load logs
     try {
       const status = await API.getScheduler(id);
@@ -347,6 +423,7 @@ const Accounts = {
       }
     } catch {}
   },
+
   _renderTimeRanges(ranges) {
     const container = Utils.qs('#timeRanges');
     this._timeRanges = [...ranges];
@@ -372,51 +449,58 @@ const Accounts = {
   },
 
   toggleDay(btn) { btn.classList.toggle('active'); },
-toggleSchedulerBehavior(enabled) {
+
+  toggleSchedulerBehavior(enabled) {
     const el = Utils.qs('#schBehaviorConfig');
     if (el) el.style.display = enabled ? 'block' : 'none';
   },
- async saveScheduler() {
+
+  async saveScheduler() {
     const id = this._schedulerId;
     if (!id) return;
- 
-    // Lấy time ranges
+
     const ranges = [];
     (this._timeRanges || []).forEach((_, i) => {
       const from = Utils.qs(`#tr-from-${i}`)?.value;
       const to   = Utils.qs(`#tr-to-${i}`)?.value;
       if (from && to) ranges.push({ from, to });
     });
- 
-    // Lấy ngày
+
     const days = [];
     Utils.qsa('.day-btn.active').forEach(btn => days.push(Number(btn.dataset.day)));
- 
-    // Lấy behavior config đầy đủ
+
     const behaviorEnabled = Utils.qs('#schBehaviorEnabled')?.checked || false;
- 
     let behaviorConfig = null;
+
     if (behaviorEnabled) {
-      const geminiKey = Utils.qs('#schGeminiKey')?.value?.trim() || '';
- 
-      // Lưu Gemini key vào settings nếu có
-      if (geminiKey) {
-        await API.saveSettings({ geminiApiKey: geminiKey });
+      const provider = Utils.qs('#schAiProvider')?.value || 'gemini';
+      const apiKey   = this._getSchApiKey();
+
+      // Lưu key vào settings theo provider
+      if (apiKey) {
+        const keyField =
+          provider === 'gemini' ? 'geminiApiKey' :
+          provider === 'groq'   ? 'groqApiKey'   : 'openaiApiKey';
+        await API.saveSettings({ [keyField]: apiKey, aiProvider: provider });
       }
- 
+
       behaviorConfig = {
-        geminiApiKey   : geminiKey,
+        aiProvider     : provider,
+        aiApiKey       : apiKey,
+        geminiApiKey   : provider === 'gemini' ? apiKey : undefined,
+        groqApiKey     : provider === 'groq'   ? apiKey : undefined,
+        openaiApiKey   : provider === 'openai' ? apiKey : undefined,
         durationMinutes: Number(Utils.qs('#schBhDuration')?.value)  || 10,
-        reactionRate   : Number(Utils.qs('#schBhRate')?.value)       || 40,
-        readTimeMin    : Number(Utils.qs('#schBhReadMin')?.value)    || 800,
-        readTimeMax    : Number(Utils.qs('#schBhReadMax')?.value)    || 3000,
-        hotReadTimeMin : Number(Utils.qs('#schBhHotMin')?.value)     || 3000,
-        hotReadTimeMax : Number(Utils.qs('#schBhHotMax')?.value)     || 8000,
-        pauseMin       : Number(Utils.qs('#schBhPauseMin')?.value)   || 500,
-        pauseMax       : Number(Utils.qs('#schBhPauseMax')?.value)   || 1500,
+        reactionRate   : Number(Utils.qs('#schBhRate')?.value)      || 40,
+        readTimeMin    : Number(Utils.qs('#schBhReadMin')?.value)   || 800,
+        readTimeMax    : Number(Utils.qs('#schBhReadMax')?.value)   || 3000,
+        hotReadTimeMin : Number(Utils.qs('#schBhHotMin')?.value)    || 3000,
+        hotReadTimeMax : Number(Utils.qs('#schBhHotMax')?.value)    || 8000,
+        pauseMin       : Number(Utils.qs('#schBhPauseMin')?.value)  || 500,
+        pauseMax       : Number(Utils.qs('#schBhPauseMax')?.value)  || 1500,
       };
     }
- 
+
     const config = {
       enabled         : Utils.qs('#schEnabled').checked,
       intervalMinutes : Number(Utils.qs('#schInterval').value) || 30,
@@ -425,11 +509,14 @@ toggleSchedulerBehavior(enabled) {
       behaviorEnabled,
       behaviorConfig,
     };
- 
+
     try {
       await API.setScheduler(id, config);
       let msg = config.enabled ? '✅ Đã bật lịch' : '⏹ Đã tắt lịch';
-      if (config.enabled && behaviorEnabled) msg += ' + 🤖 Giả lập hành vi';
+      if (config.enabled && behaviorEnabled) {
+        const p = behaviorConfig?.aiProvider || 'gemini';
+        msg += ` + 🤖 Giả lập [${p.toUpperCase()}]`;
+      }
       Toast.success(msg);
       this.closeScheduler();
       await this.load();
@@ -437,6 +524,7 @@ toggleSchedulerBehavior(enabled) {
       Toast.error('Lỗi lưu lịch');
     }
   },
+
   closeScheduler() {
     Utils.qs('#schedulerModal').classList.remove('open');
     this._schedulerId = null;
@@ -511,6 +599,7 @@ toggleSchedulerBehavior(enabled) {
     Utils.qsa('.color-dot').forEach(d => d.classList.remove('active'));
     el.classList.add('active');
   },
+
   closeModal() { Utils.qs('#accountModal').classList.remove('open'); this.editingId = null; },
 
   async saveModal() {

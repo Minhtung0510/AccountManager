@@ -1,5 +1,6 @@
 // server/behavior.js — Phase 2: Giả lập hành vi FB thật
-// FIX v3.1: Sau khi behavior bắt đầu → đóng tab FB bên profile dir (Chrome thật)
+// v3.3: Multi-provider AI per session (Gemini / OpenAI / Groq)
+//        Mỗi account chọn provider riêng, chạy song song không conflict
 
 const puppeteer     = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -55,296 +56,6 @@ function getDebugPort(profileDir) {
   return BASE_PORT + num;
 }
 
-// ─── ĐÓNG TAB FB BÊN PROFILE DIR (Chrome thật) ───────────────
-// Gọi sau khi behavior đã bắt đầu thành công
-// Kết nối CDP vào Chrome profile thật → tìm và đóng tab facebook.com
-
-async function closeProfileFbTab(profileDir) {
-  const debugPort = getDebugPort(profileDir);
-  let tempBrowser = null;
-
-  try {
-    // Kiểm tra port có mở không (Chrome profile thật đang chạy)
-    const isOpen = await isPortOpen(debugPort);
-    if (!isOpen) {
-      console.log(`[Behavior] ℹ️  Chrome profile ${profileDir} không mở, bỏ qua đóng tab`);
-      return false;
-    }
-
-    console.log(`[Behavior] 🔌 Kết nối CDP profile ${profileDir} port ${debugPort} để đóng tab FB...`);
-
-    tempBrowser = await puppeteer.connect({
-      browserURL     : `http://localhost:${debugPort}`,
-      defaultViewport: null,
-    });
-
-    const pages = await tempBrowser.pages();
-    let closedCount = 0;
-
-    for (const page of pages) {
-      try {
-        const url = page.url();
-        if (url.includes('facebook.com')) {
-          console.log(`[Behavior] ❌ Đóng tab FB profile ${profileDir}: ${url.slice(0, 60)}`);
-          await page.close();
-          closedCount++;
-        }
-      } catch (e) {
-        // Tab có thể đã đóng rồi, bỏ qua
-      }
-    }
-
-    await tempBrowser.disconnect();
-
-    if (closedCount > 0) {
-      console.log(`[Behavior] ✅ Đã đóng ${closedCount} tab FB bên profile ${profileDir}`);
-    } else {
-      console.log(`[Behavior] ℹ️  Không tìm thấy tab FB nào bên profile ${profileDir}`);
-    }
-
-    return closedCount > 0;
-
-  } catch (err) {
-    console.log(`[Behavior] ⚠️  Không thể đóng tab FB profile ${profileDir}: ${err.message}`);
-    if (tempBrowser) {
-      try { await tempBrowser.disconnect(); } catch {}
-    }
-    return false;
-  }
-}
-
-// ─── ĐỌC COOKIES TỪ FILE SQLITE ──────────────────────────────
-
-async function readCookiesFromFile(profileDir) {
-  const userDataDir  = getChromeUserDataDir();
-  const profilePath  = path.join(userDataDir, profileDir);
-  const cookieFile   = path.join(profilePath, 'Cookies');
-  const cookieCopy   = path.join(profilePath, 'Cookies_behavior_copy');
-
-  if (!fs.existsSync(cookieFile)) {
-    console.log(`[Behavior] ⚠️  Không tìm thấy file Cookies: ${cookieFile}`);
-    return null;
-  }
-
-  try {
-    fs.copyFileSync(cookieFile, cookieCopy);
-  } catch (err) {
-    console.log(`[Behavior] ⚠️  Không copy được file Cookies: ${err.message}`);
-    return null;
-  }
-
-  console.log(`[Behavior] 📂 Đọc cookies từ file: ${cookieFile}`);
-
-  const pythonScript = `
-import sqlite3, json, sys, os
-
-db_path = sys.argv[1]
-
-try:
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT name, value, encrypted_value, host_key, path, 
-               expires_utc, is_secure, is_httponly, samesite
-        FROM cookies 
-        WHERE host_key LIKE '%facebook.com%'
-    """)
-    rows = cursor.fetchall()
-    conn.close()
-except Exception as e:
-    print(json.dumps({"error": str(e)}))
-    sys.exit(1)
-
-cookies = []
-for row in rows:
-    name, value, encrypted_value, host_key, path_, expires_utc, is_secure, is_httponly, samesite = row
-    
-    if not value and encrypted_value:
-        try:
-            import sys
-            if sys.platform == 'win32':
-                import ctypes
-                import ctypes.wintypes
-                
-                class DATA_BLOB(ctypes.Structure):
-                    _fields_ = [('cbData', ctypes.wintypes.DWORD),
-                                ('pbData', ctypes.POINTER(ctypes.c_char))]
-                
-                p = ctypes.create_string_buffer(encrypted_value, len(encrypted_value))
-                blobin = DATA_BLOB(ctypes.sizeof(p), p)
-                blobout = DATA_BLOB()
-                
-                if encrypted_value[:3] == b'v10' or encrypted_value[:3] == b'v11':
-                    value = ''
-                else:
-                    retval = ctypes.windll.crypt32.CryptUnprotectData(
-                        ctypes.byref(blobin), None, None, None, None, 0,
-                        ctypes.byref(blobout))
-                    if retval:
-                        value = ctypes.string_at(blobout.pbData, blobout.cbData).decode('utf-8', errors='ignore')
-                        ctypes.windll.kernel32.LocalFree(blobout.pbData)
-        except:
-            value = ''
-    
-    important = ['c_user', 'xs', 'datr', 'fr', 'sb', 'wd', 'presence', 
-                 'usida', 'dpr', 'actppresence', 'locale', 'spin']
-    if name not in important and not any(kw in name.lower() for kw in ['session', 'token', 'auth', 'user']):
-        continue
-    
-    expires = 0
-    if expires_utc > 0:
-        expires = (expires_utc / 1000000) - 11644473600
-    
-    samesite_map = {-1: 'None', 0: 'None', 1: 'Lax', 2: 'Strict'}
-    
-    cookies.append({
-        'name': name,
-        'value': value,
-        'domain': host_key,
-        'path': path_,
-        'expires': int(expires),
-        'secure': bool(is_secure),
-        'httpOnly': bool(is_httponly),
-        'sameSite': samesite_map.get(samesite, 'None'),
-    })
-
-print(json.dumps(cookies))
-`;
-
-  try {
-    const scriptFile = path.join(os.tmpdir(), 'read_cookies_fb.py');
-    fs.writeFileSync(scriptFile, pythonScript, 'utf-8');
-
-    let output;
-    try {
-      output = execSync(`python "${scriptFile}" "${cookieCopy}"`, {
-        timeout: 10000,
-        encoding: 'utf-8',
-      });
-    } catch {
-      try {
-        output = execSync(`python3 "${scriptFile}" "${cookieCopy}"`, {
-          timeout: 10000,
-          encoding: 'utf-8',
-        });
-      } catch (err2) {
-        console.log(`[Behavior] ⚠️  Python không có: ${err2.message}`);
-        return null;
-      }
-    }
-
-    try { fs.unlinkSync(scriptFile); } catch {}
-    try { fs.unlinkSync(cookieCopy); } catch {}
-
-    const result = JSON.parse(output.trim());
-    if (result.error) {
-      console.log(`[Behavior] ⚠️  Lỗi đọc SQLite: ${result.error}`);
-      return null;
-    }
-
-    const validCookies = result.filter(c => c.value && c.value.length > 0);
-    console.log(`[Behavior] 🍪 Đọc được ${validCookies.length}/${result.length} cookies từ file`);
-    return validCookies.length > 0 ? validCookies : null;
-
-  } catch (err) {
-    console.log(`[Behavior] ⚠️  Lỗi đọc cookies từ file: ${err.message}`);
-    try { fs.unlinkSync(cookieCopy); } catch {}
-    return null;
-  }
-}
-
-// ─── FALLBACK: LẤY COOKIES TỪ CHROME ĐANG CHẠY (CDP) ────────
-
-async function getCookiesViaCDP(debugPort) {
-  let tempBrowser = null;
-  try {
-    console.log(`[Behavior] 🔌 Thử lấy cookies qua CDP port ${debugPort}...`);
-    tempBrowser = await puppeteer.connect({
-      browserURL     : `http://localhost:${debugPort}`,
-      defaultViewport: null,
-    });
-
-    const pages = await tempBrowser.pages();
-    let page = pages.find(p => { try { return p.url().includes('facebook.com'); } catch { return false; } });
-
-    let opened = false;
-    if (!page) {
-      page   = await tempBrowser.newPage();
-      opened = true;
-      await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 10000 });
-      await sleep(1500);
-    }
-
-    const cookies    = await page.cookies('https://www.facebook.com');
-    const fbCookies  = cookies.filter(c => c.domain && c.domain.includes('facebook.com') && c.value);
-    console.log(`[Behavior] 🍪 CDP: ${fbCookies.length} cookies`);
-
-    if (opened) { try { await page.close(); } catch {} }
-    await tempBrowser.disconnect();
-    return fbCookies.length > 0 ? fbCookies : null;
-  } catch (err) {
-    console.log(`[Behavior] ⚠️  CDP thất bại: ${err.message}`);
-    if (tempBrowser) { try { await tempBrowser.disconnect(); } catch {} }
-    return null;
-  }
-}
-
-// ─── LẤY COOKIES: THỬ FILE TRƯỚC, CDP SAU ────────────────────
-
-async function getCookies(account, settings) {
-  const { profileDir } = account;
-  const debugPort = getDebugPort(profileDir);
-
-  const fileCookies = await readCookiesFromFile(profileDir);
-  if (fileCookies && fileCookies.length >= 2) {
-    const hasCUser = fileCookies.some(c => c.name === 'c_user' && c.value);
-    const hasXs    = fileCookies.some(c => c.name === 'xs'     && c.value);
-    if (hasCUser || hasXs) {
-      console.log(`[Behavior] ✅ Dùng cookies từ file (c_user:${hasCUser}, xs:${hasXs})`);
-      return fileCookies;
-    }
-  }
-
-  console.log(`[Behavior] 🔄 File cookies không đủ, thử CDP...`);
-  const isOpen = await isPortOpen(debugPort);
-  if (isOpen) {
-    const cdpCookies = await getCookiesViaCDP(debugPort);
-    if (cdpCookies) return cdpCookies;
-  }
-
-  if (!isOpen) {
-    console.log(`[Behavior] 🚀 Spawn Chrome tạm để lấy cookies...`);
-    try {
-      const chromePath  = settings.chromePath || getDefaultChromePath();
-      const userDataDir = getChromeUserDataDir();
-
-      const proc = spawn(chromePath, [
-        `--user-data-dir=${userDataDir}`,
-        `--profile-directory=${profileDir}`,
-        `--remote-debugging-port=${debugPort}`,
-        '--no-first-run',
-        '--no-default-browser-check',
-        '--start-maximized',
-        '--no-sandbox',
-        'https://www.facebook.com',
-      ], { detached: true, stdio: 'ignore' });
-      proc.unref();
-
-      const opened = await waitForPort(debugPort, 20000);
-      if (opened) {
-        await sleep(4000);
-        const cdpCookies = await getCookiesViaCDP(debugPort);
-        if (cdpCookies) return cdpCookies;
-      }
-    } catch (err) {
-      console.log(`[Behavior] ⚠️  Spawn Chrome thất bại: ${err.message}`);
-    }
-  }
-
-  console.log(`[Behavior] ❌ Không lấy được cookies cho ${account.name}`);
-  return null;
-}
-
 // ─── CDP PORT CHECK ───────────────────────────────────────────
 
 async function isPortOpen(port) {
@@ -367,57 +78,291 @@ async function waitForPort(port, timeout) {
   return false;
 }
 
-// ─── GEMINI AI ────────────────────────────────────────────────
+// ─── ĐÓNG TAB FB BÊN PROFILE DIR ─────────────────────────────
 
-let geminiClient = null;
-const emotionCache = new Map();
-
-function initGemini(apiKey) {
-  if (!apiKey) { geminiClient = null; return null; }
+async function closeProfileFbTab(profileDir) {
+  const debugPort = getDebugPort(profileDir);
+  let tempBrowser = null;
   try {
-    geminiClient = new GoogleGenerativeAI(apiKey)
-      .getGenerativeModel({ model: 'gemini-2.0-flash' });
-    console.log('[Behavior] ✅ Gemini sẵn sàng');
-    return geminiClient;
-  } catch { geminiClient = null; return null; }
+    const isOpen = await isPortOpen(debugPort);
+    if (!isOpen) {
+      console.log(`[Behavior] ℹ️  Chrome profile ${profileDir} không mở, bỏ qua đóng tab`);
+      return false;
+    }
+    tempBrowser = await puppeteer.connect({ browserURL: `http://localhost:${debugPort}`, defaultViewport: null });
+    const pages = await tempBrowser.pages();
+    let closedCount = 0;
+    for (const page of pages) {
+      try {
+        if (page.url().includes('facebook.com')) { await page.close(); closedCount++; }
+      } catch {}
+    }
+    await tempBrowser.disconnect();
+    console.log(closedCount > 0
+      ? `[Behavior] ✅ Đã đóng ${closedCount} tab FB bên profile ${profileDir}`
+      : `[Behavior] ℹ️  Không tìm thấy tab FB nào bên profile ${profileDir}`);
+    return closedCount > 0;
+  } catch (err) {
+    console.log(`[Behavior] ⚠️  Không thể đóng tab FB profile ${profileDir}: ${err.message}`);
+    if (tempBrowser) { try { await tempBrowser.disconnect(); } catch {} }
+    return false;
+  }
 }
 
-async function analyzeEmotion(postText, isAd, config) {
+// ─── COOKIES ─────────────────────────────────────────────────
+
+async function readCookiesFromFile(profileDir) {
+  const userDataDir = getChromeUserDataDir();
+  const profilePath = path.join(userDataDir, profileDir);
+  const cookieFile  = path.join(profilePath, 'Cookies');
+  const cookieCopy  = path.join(profilePath, 'Cookies_behavior_copy');
+
+  if (!fs.existsSync(cookieFile)) {
+    console.log(`[Behavior] ⚠️  Không tìm thấy file Cookies: ${cookieFile}`);
+    return null;
+  }
+  try { fs.copyFileSync(cookieFile, cookieCopy); }
+  catch (err) { console.log(`[Behavior] ⚠️  Không copy được file Cookies: ${err.message}`); return null; }
+
+  const pythonScript = `
+import sqlite3, json, sys
+db_path = sys.argv[1]
+try:
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT name, value, encrypted_value, host_key, path,
+               expires_utc, is_secure, is_httponly, samesite
+        FROM cookies WHERE host_key LIKE '%facebook.com%'
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+except Exception as e:
+    print(json.dumps({"error": str(e)})); sys.exit(1)
+cookies = []
+for row in rows:
+    name, value, encrypted_value, host_key, path_, expires_utc, is_secure, is_httponly, samesite = row
+    if not value and encrypted_value:
+        try:
+            if sys.platform == 'win32':
+                import ctypes, ctypes.wintypes
+                class DATA_BLOB(ctypes.Structure):
+                    _fields_ = [('cbData', ctypes.wintypes.DWORD), ('pbData', ctypes.POINTER(ctypes.c_char))]
+                p = ctypes.create_string_buffer(encrypted_value, len(encrypted_value))
+                blobin = DATA_BLOB(ctypes.sizeof(p), p)
+                blobout = DATA_BLOB()
+                if encrypted_value[:3] not in [b'v10', b'v11']:
+                    if ctypes.windll.crypt32.CryptUnprotectData(ctypes.byref(blobin), None, None, None, None, 0, ctypes.byref(blobout)):
+                        value = ctypes.string_at(blobout.pbData, blobout.cbData).decode('utf-8', errors='ignore')
+                        ctypes.windll.kernel32.LocalFree(blobout.pbData)
+        except: value = ''
+    important = ['c_user','xs','datr','fr','sb','wd','presence','usida','dpr','actppresence','locale','spin']
+    if name not in important and not any(kw in name.lower() for kw in ['session','token','auth','user']): continue
+    expires = int((expires_utc / 1000000) - 11644473600) if expires_utc > 0 else 0
+    samesite_map = {-1:'None',0:'None',1:'Lax',2:'Strict'}
+    cookies.append({'name':name,'value':value,'domain':host_key,'path':path_,'expires':expires,
+                    'secure':bool(is_secure),'httpOnly':bool(is_httponly),'sameSite':samesite_map.get(samesite,'None')})
+print(json.dumps(cookies))
+`;
+  try {
+    const scriptFile = path.join(os.tmpdir(), 'read_cookies_fb.py');
+    fs.writeFileSync(scriptFile, pythonScript, 'utf-8');
+    let output;
+    try { output = execSync(`python "${scriptFile}" "${cookieCopy}"`, { timeout: 10000, encoding: 'utf-8' }); }
+    catch { output = execSync(`python3 "${scriptFile}" "${cookieCopy}"`, { timeout: 10000, encoding: 'utf-8' }); }
+    try { fs.unlinkSync(scriptFile); } catch {}
+    try { fs.unlinkSync(cookieCopy); } catch {}
+    const result = JSON.parse(output.trim());
+    if (result.error) { console.log(`[Behavior] ⚠️  Lỗi đọc SQLite: ${result.error}`); return null; }
+    const validCookies = result.filter(c => c.value && c.value.length > 0);
+    console.log(`[Behavior] 🍪 Đọc được ${validCookies.length}/${result.length} cookies từ file`);
+    return validCookies.length > 0 ? validCookies : null;
+  } catch (err) {
+    console.log(`[Behavior] ⚠️  Lỗi đọc cookies từ file: ${err.message}`);
+    try { fs.unlinkSync(cookieCopy); } catch {}
+    return null;
+  }
+}
+
+async function getCookiesViaCDP(debugPort) {
+  let tempBrowser = null;
+  try {
+    tempBrowser = await puppeteer.connect({ browserURL: `http://localhost:${debugPort}`, defaultViewport: null });
+    const pages = await tempBrowser.pages();
+    let page = pages.find(p => { try { return p.url().includes('facebook.com'); } catch { return false; } });
+    let opened = false;
+    if (!page) { page = await tempBrowser.newPage(); opened = true; await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 10000 }); await sleep(1500); }
+    const cookies   = await page.cookies('https://www.facebook.com');
+    const fbCookies = cookies.filter(c => c.domain && c.domain.includes('facebook.com') && c.value);
+    if (opened) { try { await page.close(); } catch {} }
+    await tempBrowser.disconnect();
+    return fbCookies.length > 0 ? fbCookies : null;
+  } catch (err) {
+    console.log(`[Behavior] ⚠️  CDP thất bại: ${err.message}`);
+    if (tempBrowser) { try { await tempBrowser.disconnect(); } catch {} }
+    return null;
+  }
+}
+
+async function getCookies(account, settings) {
+  const { profileDir } = account;
+  const debugPort = getDebugPort(profileDir);
+  const fileCookies = await readCookiesFromFile(profileDir);
+  if (fileCookies && fileCookies.length >= 2) {
+    const hasCUser = fileCookies.some(c => c.name === 'c_user' && c.value);
+    const hasXs    = fileCookies.some(c => c.name === 'xs' && c.value);
+    if (hasCUser || hasXs) { console.log(`[Behavior] ✅ Dùng cookies từ file`); return fileCookies; }
+  }
+  console.log(`[Behavior] 🔄 File cookies không đủ, thử CDP...`);
+  const isOpen = await isPortOpen(debugPort);
+  if (isOpen) { const c = await getCookiesViaCDP(debugPort); if (c) return c; }
+  if (!isOpen) {
+    console.log(`[Behavior] 🚀 Spawn Chrome tạm để lấy cookies...`);
+    try {
+      const proc = spawn(settings.chromePath || getDefaultChromePath(), [
+        `--user-data-dir=${getChromeUserDataDir()}`, `--profile-directory=${profileDir}`,
+        `--remote-debugging-port=${debugPort}`, '--no-first-run', '--start-maximized', '--no-sandbox',
+        'https://www.facebook.com',
+      ], { detached: true, stdio: 'ignore' });
+      proc.unref();
+      const opened = await waitForPort(debugPort, 20000);
+      if (opened) { await sleep(4000); const c = await getCookiesViaCDP(debugPort); if (c) return c; }
+    } catch (err) { console.log(`[Behavior] ⚠️  Spawn Chrome thất bại: ${err.message}`); }
+  }
+  console.log(`[Behavior] ❌ Không lấy được cookies cho ${account.name}`);
+  return null;
+}
+
+// ─── MULTI-PROVIDER AI CLIENT ─────────────────────────────────
+// Mỗi session tạo client riêng → không conflict khi chạy song song
+
+/**
+ * Tạo AI client dựa theo provider
+ * @param {string} provider  - 'gemini' | 'openai' | 'groq'
+ * @param {string} apiKey    - API key tương ứng
+ * @param {string} model     - Override model (optional)
+ * @returns {{ provider, call: async (prompt) => string } | null}
+ */
+function createAIClient(provider, apiKey, model) {
+  if (!provider || !apiKey) return null;
+
+  // ── Gemini ──────────────────────────────────────────────────
+  if (provider === 'gemini') {
+    try {
+      const genAI  = new GoogleGenerativeAI(apiKey);
+      const gemini = genAI.getGenerativeModel({ model: model || 'gemini-2.0-flash' });
+      console.log(`[Behavior] ✅ Gemini sẵn sàng (${model || 'gemini-2.0-flash'})`);
+      return {
+        provider: 'gemini',
+        call: async (prompt) => {
+          const result = await gemini.generateContent(prompt);
+          return result.response.text().trim().toLowerCase();
+        },
+      };
+    } catch (err) {
+      console.log(`[Behavior] ❌ Gemini init failed: ${err.message}`);
+      return null;
+    }
+  }
+
+  // ── OpenAI ──────────────────────────────────────────────────
+  if (provider === 'openai') {
+    const selectedModel = model || 'gpt-3.5-turbo';
+    console.log(`[Behavior] ✅ OpenAI sẵn sàng (${selectedModel})`);
+    return {
+      provider: 'openai',
+      call: async (prompt) => {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body   : JSON.stringify({
+            model   : selectedModel,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 10,
+            temperature: 0.3,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error?.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        return (data.choices?.[0]?.message?.content || '').trim().toLowerCase();
+      },
+    };
+  }
+
+  // ── Groq ────────────────────────────────────────────────────
+  if (provider === 'groq') {
+    const selectedModel = model || 'llama3-8b-8192';
+    console.log(`[Behavior] ✅ Groq sẵn sàng (${selectedModel})`);
+    return {
+      provider: 'groq',
+      call: async (prompt) => {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body   : JSON.stringify({
+            model   : selectedModel,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 10,
+            temperature: 0.3,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error?.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        return (data.choices?.[0]?.message?.content || '').trim().toLowerCase();
+      },
+    };
+  }
+
+  console.log(`[Behavior] ⚠️  Provider không hợp lệ: ${provider}`);
+  return null;
+}
+
+// ─── ANALYZE EMOTION (dùng client bất kỳ) ────────────────────
+
+async function analyzeEmotion(postText, isAd, config, aiClient, emotionCache) {
   if (isAd) return 'none';
-  const rate = (config && config.reactionRate) || 40;
+  const rate = config?.reactionRate || 40;
   if (!postText || postText.trim().length < 10) return 'none';
   if (rand(1, 100) > rate) return 'none';
 
-  if (geminiClient) {
+  if (aiClient) {
     const cacheKey = postText.slice(0, 80);
     if (emotionCache.has(cacheKey)) return emotionCache.get(cacheKey);
 
     try {
-      const emotion = await Promise.race([
-        (async () => {
-          const prompt =
-            `FB VN user. 1 word: like/haha/wow/sad/angry/none\n` +
-            `Post: "${postText.slice(0, 200)}"\nAnswer:`;
-          const result = await geminiClient.generateContent(prompt);
-          const text   = result.response.text().trim().toLowerCase().split(/[\s\n]/)[0];
-          const valid  = ['like','haha','wow','sad','angry','none'];
-          return valid.find(v => text.startsWith(v)) || 'like';
-        })(),
-        new Promise(r => setTimeout(() => r('like'), 2000)),
+      const prompt =
+        `FB VN user. Reply 1 word only: like/haha/wow/sad/angry/none\n` +
+        `Post: "${postText.slice(0, 200)}"\nAnswer:`;
+
+      const rawText = await Promise.race([
+        aiClient.call(prompt),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000)),
       ]);
 
+      const valid   = ['like','haha','wow','sad','angry','none'];
+      const emotion = valid.find(v => rawText.startsWith(v)) || 'like';
+      console.log(`[${aiClient.provider}] → ${emotion}: "${postText.slice(0,35)}..."`);
       emotionCache.set(cacheKey, emotion);
       if (emotionCache.size > 500) emotionCache.delete(emotionCache.keys().next().value);
-      console.log(`[Gemini] → ${emotion}: "${postText.slice(0,35)}..."`);
       return emotion;
-    } catch { return 'like'; }
+    } catch (err) {
+      console.log(`[Behavior] AI error (${aiClient.provider}): ${err.message}`);
+      return 'like'; // fallback
+    }
   }
 
-  const r = rand(1,10);
-  if (r<=6) return 'like';
-  if (r<=7) return 'haha';
-  if (r<=8) return 'wow';
-  if (r<=9) return 'sad';
+  // Không có AI → random
+  const r = rand(1, 10);
+  if (r <= 6) return 'like';
+  if (r <= 7) return 'haha';
+  if (r <= 8) return 'wow';
+  if (r <= 9) return 'sad';
   return 'angry';
 }
 
@@ -437,30 +382,23 @@ async function launchWithCookies(account, settings, cookies) {
 
   console.log(`[Behavior] 🚀 Launch Puppeteer: ${name}`);
 
-  let browser;
   const launchOpts = {
     executablePath   : chromePath,
     userDataDir      : behaviorDir,
     args: [
-      '--profile-directory=Default',
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--disable-infobars',
-      '--disable-blink-features=AutomationControlled',
-      '--start-maximized',
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-extensions',
+      '--profile-directory=Default', '--no-first-run', '--no-default-browser-check',
+      '--disable-infobars', '--disable-blink-features=AutomationControlled',
+      '--start-maximized', '--no-sandbox', '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage', '--disable-extensions',
     ],
     ignoreDefaultArgs: ['--enable-automation'],
     headless         : false,
     defaultViewport  : null,
   };
 
-  try {
-    browser = await puppeteer.launch(launchOpts);
-  } catch {
+  let browser;
+  try { browser = await puppeteer.launch(launchOpts); }
+  catch {
     clearLocks(behaviorDir);
     await sleep(1000);
     browser = await puppeteer.launch({
@@ -482,14 +420,10 @@ async function launchWithCookies(account, settings, cookies) {
 
   if (cookies && cookies.length > 0) {
     console.log(`[Behavior] 💉 Inject ${cookies.length} cookies...`);
-    for (const cookie of cookies) {
-      try { await page.setCookie(cookie); } catch {}
-    }
+    for (const cookie of cookies) { try { await page.setCookie(cookie); } catch {} }
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(3000);
-  } else {
-    await sleep(3000);
-  }
+  } else { await sleep(3000); }
 
   const isLoggedIn = await page.evaluate(() =>
     !document.querySelector('#email, input[name="email"], [data-testid="royal_email"]')
@@ -510,8 +444,6 @@ async function launchWithCookies(account, settings, cookies) {
   console.log(`[Behavior] ✅ Ready: ${name} | ${page.url().slice(0,50)}`);
   return { browser, page, needLogin: false };
 }
-
-// ─── SETUP BROWSER ────────────────────────────────────────────
 
 async function setupBrowser(account, settings) {
   const cookies = await getCookies(account, settings);
@@ -594,31 +526,22 @@ async function reactToPost(page, postIdx, emotion) {
     }
     if (!likeBtn) return false;
     if (emotion === 'like') {
-      await likeBtn.click();
-      await sleep(rand(400, 800));
+      await likeBtn.click(); await sleep(rand(400, 800));
       console.log(`[Behavior] ❤️ Like bài #${postIdx}`);
       return true;
     }
-    await likeBtn.hover();
-    await sleep(rand(1000, 1800));
-    const emotionMap = {
-      haha : ['[aria-label="Haha"]'],
-      wow  : ['[aria-label="Wow"]'],
-      sad  : ['[aria-label="Buồn"]','[aria-label="Sad"]'],
-      angry: ['[aria-label="Phẫn nộ"]','[aria-label="Angry"]'],
-    };
+    await likeBtn.hover(); await sleep(rand(1000, 1800));
+    const emotionMap = { haha:['[aria-label="Haha"]'], wow:['[aria-label="Wow"]'], sad:['[aria-label="Buồn"]','[aria-label="Sad"]'], angry:['[aria-label="Phẫn nộ"]','[aria-label="Angry"]'] };
     for (const sel of (emotionMap[emotion] || [])) {
       const btns = await page.$$(sel);
       if (btns.length > 0) {
-        await btns[btns.length-1].click();
-        await sleep(rand(400, 700));
+        await btns[btns.length-1].click(); await sleep(rand(400, 700));
         const icons = { haha:'😂', wow:'😮', sad:'😢', angry:'😡' };
         console.log(`[Behavior] ${icons[emotion]} ${emotion} bài #${postIdx}`);
         return true;
       }
     }
-    await likeBtn.click();
-    await sleep(rand(300, 600));
+    await likeBtn.click(); await sleep(rand(300, 600));
     console.log(`[Behavior] ❤️ Fallback like #${postIdx}`);
     return true;
   } catch (err) {
@@ -634,43 +557,46 @@ async function startBehavior(account, settings, config, onProgress) {
 
   if (behaviorSessions.has(id)) return { ok: false, message: `${name}: Đang chạy rồi!` };
 
-  if (settings.geminiApiKey) initGemini(settings.geminiApiKey);
-  else if (config.geminiApiKey) initGemini(config.geminiApiKey);
-  else geminiClient = null;
+  // ── Tạo AI client riêng cho session này ──────────────────────
+  // Ưu tiên: config của account > settings toàn cục
+  const aiProvider = config.aiProvider || settings.aiProvider || 'gemini';
+  const aiKey      = config.aiApiKey   || (
+    aiProvider === 'gemini' ? (config.geminiApiKey || settings.geminiApiKey) :
+    aiProvider === 'openai' ? (config.openaiApiKey || settings.openaiApiKey) :
+    aiProvider === 'groq'   ? (config.groqApiKey   || settings.groqApiKey)   : null
+  );
+  const aiModel    = config.aiModel || null;
+
+  const aiClient    = createAIClient(aiProvider, aiKey, aiModel);
+  const emotionCache = new Map(); // Cache riêng cho từng session
+
+  if (!aiClient) {
+    console.log(`[Behavior] ⚠️  ${name}: Không có AI client (${aiProvider}), dùng random cảm xúc`);
+  } else {
+    console.log(`[Behavior] 🤖 ${name}: Dùng ${aiProvider.toUpperCase()} AI`);
+  }
 
   let setupResult;
-  try {
-    setupResult = await setupBrowser(account, settings);
-  } catch (err) {
-    return { ok: false, message: `${name}: ${err.message}` };
-  }
+  try { setupResult = await setupBrowser(account, settings); }
+  catch (err) { return { ok: false, message: `${name}: ${err.message}` }; }
 
   if (setupResult.needLogin) {
     return {
-      ok       : false,
-      needLogin: true,
-      message  :
-        `${name} (${profileDir}): Chưa đăng nhập Facebook!\n\n` +
-        `Cách fix:\n` +
-        `1. Bấm "⚡ Mở Facebook"\n` +
-        `2. Đăng nhập thủ công trong profile đó\n` +
-        `3. Đóng Chrome\n` +
-        `4. Chạy lại giả lập — lần sau tự động`,
+      ok: false, needLogin: true,
+      message: `${name} (${profileDir}): Chưa đăng nhập Facebook!\n\n` +
+        `Cách fix:\n1. Bấm "⚡ Mở Facebook"\n2. Đăng nhập thủ công\n3. Đóng Chrome\n4. Chạy lại giả lập`,
     };
   }
 
   const { browser, page } = setupResult;
 
-  // ── MỚI: Đóng tab FB bên profile dir sau khi behavior đã sẵn sàng ──
-  // Delay nhỏ để behavior Chrome ổn định trước
+  // Đóng tab FB bên profile dir sau 3 giây
   setTimeout(async () => {
     try {
       console.log(`[Behavior] 🔄 Đóng tab FB bên profile dir: ${profileDir}...`);
       await closeProfileFbTab(profileDir);
-    } catch (e) {
-      console.log(`[Behavior] ⚠️  Lỗi đóng tab profile: ${e.message}`);
-    }
-  }, 3000); // Chờ 3 giây sau khi behavior bắt đầu
+    } catch (e) { console.log(`[Behavior] ⚠️  Lỗi đóng tab profile: ${e.message}`); }
+  }, 3000);
 
   const cfg = {
     durationMinutes: config.durationMinutes || 10,
@@ -684,12 +610,13 @@ async function startBehavior(account, settings, config, onProgress) {
   };
 
   const stats = {
-    postsViewed:0, postsReacted:0, hotPostsRead:0, adsSkipped:0,
-    startTime: Date.now(),
-    reactions: { like:0, haha:0, wow:0, sad:0, angry:0 },
+    postsViewed: 0, postsReacted: 0, hotPostsRead: 0, adsSkipped: 0,
+    startTime  : Date.now(),
+    aiProvider : aiProvider,
+    reactions  : { like:0, haha:0, wow:0, sad:0, angry:0 },
   };
 
-  const sess = { browser, page, running: true, stats };
+  const sess = { browser, page, running: true, stats, aiProvider };
   behaviorSessions.set(id, sess);
   browser.on('disconnected', () => {
     const s = behaviorSessions.get(id);
@@ -697,8 +624,8 @@ async function startBehavior(account, settings, config, onProgress) {
     behaviorSessions.delete(id);
   });
 
-  if (onProgress) onProgress({ accountId:id, name, event:'start', stats });
-  console.log(`[Behavior] ▶ ${name} | ${cfg.durationMinutes}phút | ${cfg.reactionRate}% | Gemini:${!!geminiClient}`);
+  if (onProgress) onProgress({ accountId: id, name, event: 'start', stats });
+  console.log(`[Behavior] ▶ ${name} | ${cfg.durationMinutes}phút | ${cfg.reactionRate}% | AI:${aiProvider.toUpperCase()}`);
 
   const endTime = Date.now() + cfg.durationMinutes * 60 * 1000;
   let   loop    = 0;
@@ -709,24 +636,21 @@ async function startBehavior(account, settings, config, onProgress) {
     try {
       const posts = await getVisiblePosts(page);
 
-      if (!posts.length) {
-        await scrollNaturally(page);
-        await sleep(rand(800, 2000));
-        continue;
-      }
+      if (!posts.length) { await scrollNaturally(page); await sleep(rand(800, 2000)); continue; }
 
       const visible   = posts.filter(p => p.inView);
       const realPosts = visible.filter(p => !p.isAd);
       console.log(`[Behavior] Loop#${loop} [${name}]: ${realPosts.length} bài | ${visible.filter(p=>p.isAd).length} QC | 👁${stats.postsViewed} ❤️${stats.postsReacted}`);
 
+      // Phân tích cảm xúc song song (nếu có AI)
       const postAnalysis = new Map();
-      if (geminiClient) {
+      if (aiClient) {
         await Promise.race([
           Promise.all(realPosts.filter(p => p.text.length > 10).map(async post => {
-            const emotion = await analyzeEmotion(post.text, post.isAd, cfg);
+            const emotion = await analyzeEmotion(post.text, post.isAd, cfg, aiClient, emotionCache);
             postAnalysis.set(post.idx, emotion);
           })),
-          sleep(2000),
+          sleep(2500),
         ]);
       }
 
@@ -746,10 +670,7 @@ async function startBehavior(account, settings, config, onProgress) {
           ? rand(cfg.hotReadTimeMin, cfg.hotReadTimeMax)
           : rand(cfg.readTimeMin, cfg.readTimeMax);
 
-        if (post.isHot) {
-          stats.hotPostsRead++;
-          if (onProgress) onProgress({ accountId:id, name, event:'reading_hot', post, stats });
-        }
+        if (post.isHot) { stats.hotPostsRead++; if (onProgress) onProgress({ accountId:id, name, event:'reading_hot', post, stats }); }
 
         stats.postsViewed++;
         if (onProgress) onProgress({ accountId:id, name, event:'reading', stats });
@@ -759,14 +680,15 @@ async function startBehavior(account, settings, config, onProgress) {
         if (!sess.running) break;
 
         let emotion = postAnalysis.get(post.idx);
-        if (!emotion && post.text.length > 10) emotion = await analyzeEmotion(post.text, post.isAd, cfg);
+        if (!emotion && post.text.length > 10)
+          emotion = await analyzeEmotion(post.text, post.isAd, cfg, aiClient, emotionCache);
 
         if (emotion && emotion !== 'none') {
           await sleep(rand(200, 500));
           const reacted = await reactToPost(page, i, emotion);
           if (reacted) {
             stats.postsReacted++;
-            stats.reactions[emotion] = (stats.reactions[emotion]||0) + 1;
+            stats.reactions[emotion] = (stats.reactions[emotion] || 0) + 1;
             if (onProgress) onProgress({ accountId:id, name, event:'reacted', emotion, stats });
             await sleep(rand(600, 1500));
           }
@@ -791,7 +713,7 @@ async function startBehavior(account, settings, config, onProgress) {
   try { await browser.close(); } catch {}
 
   const elapsed = Math.round((Date.now() - stats.startTime) / 1000 / 60);
-  const msg = `${name}: Xong! ${elapsed}phút | 👁${stats.postsViewed} | ❤️${stats.postsReacted} | 🚫${stats.adsSkipped} QC`;
+  const msg = `${name}: Xong! ${elapsed}phút | 👁${stats.postsViewed} | ❤️${stats.postsReacted} | 🚫${stats.adsSkipped} QC | AI:${aiProvider}`;
   console.log(`[Behavior] ✅ ${msg}`);
   if (onProgress) onProgress({ accountId:id, name, event:'done', stats });
   return { ok: true, message: msg, stats };
@@ -801,7 +723,7 @@ async function scheduledBehavior(account, settings, behaviorConfig) {
   console.log(`[Scheduler+Behavior] ⏰ ${account.name} (${account.profileDir})`);
   return startBehavior(account, settings, behaviorConfig, p => {
     if (p.event === 'reacted' || p.event === 'done')
-      console.log(`[Scheduler+Behavior] ${p.event}: ${p.name}`, p.emotion||'');
+      console.log(`[Scheduler+Behavior] reacted: ${p.name}`, p.emotion || '');
   });
 }
 
@@ -819,13 +741,16 @@ function stopBehavior(accountId) {
 function getBehaviorStatus(accountId) {
   const s = behaviorSessions.get(accountId);
   if (!s) return { running: false };
-  return { running: s.running, elapsed: Math.round((Date.now()-s.stats.startTime)/1000/60), stats: s.stats };
+  return { running: s.running, elapsed: Math.round((Date.now()-s.stats.startTime)/1000/60), stats: s.stats, aiProvider: s.aiProvider };
 }
 
 function getAllBehaviorStatus() {
   const result = {};
-  behaviorSessions.forEach((s, id) => { result[id] = { running: s.running, stats: s.stats }; });
+  behaviorSessions.forEach((s, id) => { result[id] = { running: s.running, stats: s.stats, aiProvider: s.aiProvider }; });
   return result;
 }
+
+// initGemini giữ lại để backward compat nhưng không làm gì nữa
+function initGemini() {}
 
 module.exports = { startBehavior, stopBehavior, getBehaviorStatus, getAllBehaviorStatus, scheduledBehavior, initGemini };
