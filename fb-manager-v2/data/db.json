@@ -37,12 +37,12 @@
           "geminiApiKey": "AIzaSyDo0yeJXIbElDHvcyAhsEydHhtK2ugnaIw",
           "durationMinutes": 360,
           "reactionRate": 80,
-          "readTimeMin": 3000,
-          "readTimeMax": 5000,
+          "readTimeMin": 1500,
+          "readTimeMax": 2000,
           "hotReadTimeMin": 15000,
           "hotReadTimeMax": 40000,
-          "pauseMin": 2000,
-          "pauseMax": 6000
+          "pauseMin": 500,
+          "pauseMax": 2000
         }
       }
     },
@@ -79,16 +79,16 @@
         "behaviorEnabled": true,
         "behaviorConfig": {
           "aiProvider": "groq",
-          "aiApiKey": "xai-g0ChWRsZpT2xmk7O6NTZ8uUTn5JPsL9s5t4KwG9kuFtxSViItJNCGoFUnZNj4nyT0aZlzcqlvN0uQ9JK",
-          "groqApiKey": "xai-g0ChWRsZpT2xmk7O6NTZ8uUTn5JPsL9s5t4KwG9kuFtxSViItJNCGoFUnZNj4nyT0aZlzcqlvN0uQ9JK",
+          "aiApiKey": "xai-lFnR27gHSdtEIDFuTlsMfE0IUi3DjEEaXG9UjtQSn0QPdZcV4X7rZkffCIxw3VCU0BmM79LzmfnZMofC",
+          "groqApiKey": "xai-lFnR27gHSdtEIDFuTlsMfE0IUi3DjEEaXG9UjtQSn0QPdZcV4X7rZkffCIxw3VCU0BmM79LzmfnZMofC",
           "durationMinutes": 360,
           "reactionRate": 80,
-          "readTimeMin": 3000,
-          "readTimeMax": 5000,
+          "readTimeMin": 1500,
+          "readTimeMax": 2000,
           "hotReadTimeMin": 15000,
           "hotReadTimeMax": 40000,
-          "pauseMin": 2000,
-          "pauseMax": 6000
+          "pauseMin": 500,
+          "pauseMax": 2000
         }
       }
     }
@@ -193,8 +193,8 @@
     "autoStatus": true,
     "chromePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
     "geminiApiKey": "AIzaSyDo0yeJXIbElDHvcyAhsEydHhtK2ugnaIw",
-    "aiProvider": "gemini",
+    "aiProvider": "groq",
     "openaiApiKey": "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",
-    "groqApiKey": "xai-g0ChWRsZpT2xmk7O6NTZ8uUTn5JPsL9s5t4KwG9kuFtxSViItJNCGoFUnZNj4nyT0aZlzcqlvN0uQ9JK"
+    "groqApiKey": "xai-lFnR27gHSdtEIDFuTlsMfE0IUi3DjEEaXG9UjtQSn0QPdZcV4X7rZkffCIxw3VCU0BmM79LzmfnZMofC"
   }
 }
