@@ -3,7 +3,7 @@
     {
       "id": 1,
       "status": "online",
-      "lastLogin": "2026-03-20T06:36:17.199Z",
+      "lastLogin": "2026-03-20T07:12:29.323Z",
       "name": "Tùng",
       "email": "tungnmph30979@fpt.edu.vn",
       "password": "Minhtug0510",
@@ -26,67 +26,13 @@
         ],
         "timeRanges": [
           {
-            "from": "13:25",
-            "to": "13:50"
-          },
-          {
-            "from": "14:00",
-            "to": "17:00"
-          },
-          {
-            "from": "20:00",
-            "to": "22:00"
+            "from": "14:25",
+            "to": "16:45"
           }
         ],
         "behaviorEnabled": true,
         "behaviorConfig": {
-          "durationMinutes": 360,
-          "reactionRate": 80,
-          "readTimeMin": 3000,
-          "readTimeMax": 5000,
-          "hotReadTimeMin": 15000,
-          "hotReadTimeMax": 40000,
-          "pauseMin": 2000,
-          "pauseMax": 6000
-        }
-      }
-    },
-    {
-      "id": 2,
-      "status": "online",
-      "lastLogin": "2026-03-20T06:15:11.081Z",
-      "name": "cc",
-      "email": "nguyenminhtun112@gmail.com",
-      "password": "NguyenTUng0510",
-      "phone": "0937809305",
-      "tag": "Cá nhân",
-      "browser": "Chrome",
-      "profileDir": "Profile 1",
-      "notes": "",
-      "color": "#1877F2",
-      "groupId": null,
-      "schedulerConfig": {
-        "enabled": true,
-        "intervalMinutes": 10,
-        "daysOfWeek": [
-          1,
-          2,
-          3,
-          4,
-          5
-        ],
-        "timeRanges": [
-          {
-            "from": "13:12",
-            "to": "13:14"
-          },
-          {
-            "from": "14:00",
-            "to": "17:00"
-          }
-        ],
-        "behaviorEnabled": true,
-        "behaviorConfig": {
+          "geminiApiKey": "AIzaSyA5T-IM0kqRdDA4KqAsrvN8uGkdxA52z9w",
           "durationMinutes": 360,
           "reactionRate": 80,
           "readTimeMin": 3000,
@@ -100,15 +46,15 @@
     },
     {
       "id": 3,
-      "status": "online",
-      "lastLogin": "2026-03-20T06:15:04.117Z",
+      "status": "offline",
+      "lastLogin": "2026-03-20T07:00:26.211Z",
       "name": "Tùng real",
-      "email": "nguyenminhtun112@gmail.com",
+      "email": "nguyenthikiem11@gmail.com",
       "password": "Minhtug0510",
       "phone": "0937809305",
       "tag": "Cá nhân",
       "browser": "Chrome",
-      "profileDir": "Profile 3",
+      "profileDir": "Profile 1",
       "notes": "",
       "color": "#1877F2",
       "groupId": null,
@@ -124,16 +70,13 @@
         ],
         "timeRanges": [
           {
-            "from": "13:12",
-            "to": "13:14"
-          },
-          {
-            "from": "14:00",
-            "to": "17:00"
+            "from": "14:25",
+            "to": "16:45"
           }
         ],
         "behaviorEnabled": true,
         "behaviorConfig": {
+          "geminiApiKey": "AIzaSyA5T-IM0kqRdDA4KqAsrvN8uGkdxA52z9w",
           "durationMinutes": 360,
           "reactionRate": 80,
           "readTimeMin": 3000,
@@ -161,6 +104,76 @@
     }
   ],
   "history": [
+    {
+      "accountId": 4,
+      "accountName": "Tùng clone",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-20T07:19:33.977Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "cc",
+      "action": "scheduler_behavior_fail",
+      "color": "#1877F2",
+      "time": "2026-03-20T07:18:26.149Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "cc",
+      "action": "autologin",
+      "color": "#1877F2",
+      "time": "2026-03-20T07:17:09.490Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "cc",
+      "action": "scheduler_behavior_fail",
+      "color": "#1877F2",
+      "time": "2026-03-20T07:15:22.625Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_behavior",
+      "color": "#ef4444",
+      "time": "2026-03-20T07:12:29.324Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_behavior",
+      "color": "#ef4444",
+      "time": "2026-03-20T07:08:59.717Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_behavior",
+      "color": "#ef4444",
+      "time": "2026-03-20T07:02:35.139Z"
+    },
+    {
+      "accountId": 1,
+      "accountName": "Tùng",
+      "action": "scheduler_behavior",
+      "color": "#ef4444",
+      "time": "2026-03-20T07:00:40.181Z"
+    },
+    {
+      "accountId": 2,
+      "accountName": "cc",
+      "action": "scheduler_behavior",
+      "color": "#1877F2",
+      "time": "2026-03-20T07:00:39.929Z"
+    },
+    {
+      "accountId": 3,
+      "accountName": "Tùng real",
+      "action": "scheduler_behavior_fail",
+      "color": "#1877F2",
+      "time": "2026-03-20T07:00:26.211Z"
+    },
     {
       "accountId": 1,
       "accountName": "Tùng",

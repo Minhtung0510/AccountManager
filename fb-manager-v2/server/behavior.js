@@ -1,6 +1,5 @@
 // server/behavior.js — Phase 2: Giả lập hành vi FB thật
-// Fix: Đọc cookies từ file SQLite trực tiếp — không cần Chrome đang mở
-// Flow mới: profile thật (file Cookies) → copy → decrypt → inject Puppeteer
+// FIX v3.1: Sau khi behavior bắt đầu → đóng tab FB bên profile dir (Chrome thật)
 
 const puppeteer     = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -56,9 +55,65 @@ function getDebugPort(profileDir) {
   return BASE_PORT + num;
 }
 
+// ─── ĐÓNG TAB FB BÊN PROFILE DIR (Chrome thật) ───────────────
+// Gọi sau khi behavior đã bắt đầu thành công
+// Kết nối CDP vào Chrome profile thật → tìm và đóng tab facebook.com
+
+async function closeProfileFbTab(profileDir) {
+  const debugPort = getDebugPort(profileDir);
+  let tempBrowser = null;
+
+  try {
+    // Kiểm tra port có mở không (Chrome profile thật đang chạy)
+    const isOpen = await isPortOpen(debugPort);
+    if (!isOpen) {
+      console.log(`[Behavior] ℹ️  Chrome profile ${profileDir} không mở, bỏ qua đóng tab`);
+      return false;
+    }
+
+    console.log(`[Behavior] 🔌 Kết nối CDP profile ${profileDir} port ${debugPort} để đóng tab FB...`);
+
+    tempBrowser = await puppeteer.connect({
+      browserURL     : `http://localhost:${debugPort}`,
+      defaultViewport: null,
+    });
+
+    const pages = await tempBrowser.pages();
+    let closedCount = 0;
+
+    for (const page of pages) {
+      try {
+        const url = page.url();
+        if (url.includes('facebook.com')) {
+          console.log(`[Behavior] ❌ Đóng tab FB profile ${profileDir}: ${url.slice(0, 60)}`);
+          await page.close();
+          closedCount++;
+        }
+      } catch (e) {
+        // Tab có thể đã đóng rồi, bỏ qua
+      }
+    }
+
+    await tempBrowser.disconnect();
+
+    if (closedCount > 0) {
+      console.log(`[Behavior] ✅ Đã đóng ${closedCount} tab FB bên profile ${profileDir}`);
+    } else {
+      console.log(`[Behavior] ℹ️  Không tìm thấy tab FB nào bên profile ${profileDir}`);
+    }
+
+    return closedCount > 0;
+
+  } catch (err) {
+    console.log(`[Behavior] ⚠️  Không thể đóng tab FB profile ${profileDir}: ${err.message}`);
+    if (tempBrowser) {
+      try { await tempBrowser.disconnect(); } catch {}
+    }
+    return false;
+  }
+}
+
 // ─── ĐỌC COOKIES TỪ FILE SQLITE ──────────────────────────────
-// Đọc trực tiếp file Cookies của Chrome profile (SQLite database)
-// Trên Windows: cookies được mã hóa bằng DPAPI — cần decrypt
 
 async function readCookiesFromFile(profileDir) {
   const userDataDir  = getChromeUserDataDir();
@@ -71,7 +126,6 @@ async function readCookiesFromFile(profileDir) {
     return null;
   }
 
-  // Copy file cookies để tránh lock (Chrome có thể đang dùng)
   try {
     fs.copyFileSync(cookieFile, cookieCopy);
   } catch (err) {
@@ -81,7 +135,6 @@ async function readCookiesFromFile(profileDir) {
 
   console.log(`[Behavior] 📂 Đọc cookies từ file: ${cookieFile}`);
 
-  // Dùng Python script để đọc SQLite và decrypt DPAPI
   const pythonScript = `
 import sqlite3, json, sys, os
 
@@ -106,7 +159,6 @@ cookies = []
 for row in rows:
     name, value, encrypted_value, host_key, path_, expires_utc, is_secure, is_httponly, samesite = row
     
-    # Thử decrypt nếu value rỗng
     if not value and encrypted_value:
         try:
             import sys
@@ -122,9 +174,7 @@ for row in rows:
                 blobin = DATA_BLOB(ctypes.sizeof(p), p)
                 blobout = DATA_BLOB()
                 
-                # Thử v10 prefix (Chrome 80+)
                 if encrypted_value[:3] == b'v10' or encrypted_value[:3] == b'v11':
-                    # Cần local state key — bỏ qua, dùng CDP fallback
                     value = ''
                 else:
                     retval = ctypes.windll.crypt32.CryptUnprotectData(
@@ -136,16 +186,13 @@ for row in rows:
         except:
             value = ''
     
-    # Chỉ lấy cookies quan trọng của FB
     important = ['c_user', 'xs', 'datr', 'fr', 'sb', 'wd', 'presence', 
                  'usida', 'dpr', 'actppresence', 'locale', 'spin']
     if name not in important and not any(kw in name.lower() for kw in ['session', 'token', 'auth', 'user']):
         continue
     
-    # Convert expires (Chrome uses microseconds since 1601-01-01)
     expires = 0
     if expires_utc > 0:
-        # Chrome epoch offset: 11644473600 seconds
         expires = (expires_utc / 1000000) - 11644473600
     
     samesite_map = {-1: 'None', 0: 'None', 1: 'Lax', 2: 'Strict'}
@@ -165,7 +212,6 @@ print(json.dumps(cookies))
 `;
 
   try {
-    // Chạy Python script
     const scriptFile = path.join(os.tmpdir(), 'read_cookies_fb.py');
     fs.writeFileSync(scriptFile, pythonScript, 'utf-8');
 
@@ -176,7 +222,6 @@ print(json.dumps(cookies))
         encoding: 'utf-8',
       });
     } catch {
-      // Thử python3
       try {
         output = execSync(`python3 "${scriptFile}" "${cookieCopy}"`, {
           timeout: 10000,
@@ -188,7 +233,6 @@ print(json.dumps(cookies))
       }
     }
 
-    // Xóa file tạm
     try { fs.unlinkSync(scriptFile); } catch {}
     try { fs.unlinkSync(cookieCopy); } catch {}
 
@@ -198,7 +242,6 @@ print(json.dumps(cookies))
       return null;
     }
 
-    // Lọc cookies có value
     const validCookies = result.filter(c => c.value && c.value.length > 0);
     console.log(`[Behavior] 🍪 Đọc được ${validCookies.length}/${result.length} cookies từ file`);
     return validCookies.length > 0 ? validCookies : null;
@@ -211,7 +254,6 @@ print(json.dumps(cookies))
 }
 
 // ─── FALLBACK: LẤY COOKIES TỪ CHROME ĐANG CHẠY (CDP) ────────
-// Dùng khi đọc file thất bại (v10 encryption cần key từ Local State)
 
 async function getCookiesViaCDP(debugPort) {
   let tempBrowser = null;
@@ -253,10 +295,8 @@ async function getCookies(account, settings) {
   const { profileDir } = account;
   const debugPort = getDebugPort(profileDir);
 
-  // Bước 1: Thử đọc từ file SQLite (không cần Chrome mở)
   const fileCookies = await readCookiesFromFile(profileDir);
   if (fileCookies && fileCookies.length >= 2) {
-    // Kiểm tra có cookie quan trọng không (c_user = FB user ID)
     const hasCUser = fileCookies.some(c => c.name === 'c_user' && c.value);
     const hasXs    = fileCookies.some(c => c.name === 'xs'     && c.value);
     if (hasCUser || hasXs) {
@@ -265,7 +305,6 @@ async function getCookies(account, settings) {
     }
   }
 
-  // Bước 2: Fallback — lấy qua CDP nếu Chrome đang chạy
   console.log(`[Behavior] 🔄 File cookies không đủ, thử CDP...`);
   const isOpen = await isPortOpen(debugPort);
   if (isOpen) {
@@ -273,7 +312,6 @@ async function getCookies(account, settings) {
     if (cdpCookies) return cdpCookies;
   }
 
-  // Bước 3: Nếu Chrome chưa mở → spawn Chrome để lấy cookies
   if (!isOpen) {
     console.log(`[Behavior] 🚀 Spawn Chrome tạm để lấy cookies...`);
     try {
@@ -292,10 +330,9 @@ async function getCookies(account, settings) {
       ], { detached: true, stdio: 'ignore' });
       proc.unref();
 
-      // Chờ port mở
       const opened = await waitForPort(debugPort, 20000);
       if (opened) {
-        await sleep(4000); // Chờ FB load
+        await sleep(4000);
         const cdpCookies = await getCookiesViaCDP(debugPort);
         if (cdpCookies) return cdpCookies;
       }
@@ -440,11 +477,9 @@ async function launchWithCookies(account, settings, cookies) {
     window.chrome = { runtime: {} };
   });
 
-  // Navigate đến FB
   await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 20000 });
   await sleep(1000);
 
-  // Inject cookies nếu có
   if (cookies && cookies.length > 0) {
     console.log(`[Behavior] 💉 Inject ${cookies.length} cookies...`);
     for (const cookie of cookies) {
@@ -456,7 +491,6 @@ async function launchWithCookies(account, settings, cookies) {
     await sleep(3000);
   }
 
-  // Kiểm tra đăng nhập
   const isLoggedIn = await page.evaluate(() =>
     !document.querySelector('#email, input[name="email"], [data-testid="royal_email"]')
   );
@@ -467,7 +501,6 @@ async function launchWithCookies(account, settings, cookies) {
     return { browser: null, page: null, needLogin: true };
   }
 
-  // Về newsfeed
   const url = page.url();
   if (url.includes('/messages') || url.includes('/watch') || url.includes('/marketplace')) {
     await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -627,6 +660,18 @@ async function startBehavior(account, settings, config, onProgress) {
   }
 
   const { browser, page } = setupResult;
+
+  // ── MỚI: Đóng tab FB bên profile dir sau khi behavior đã sẵn sàng ──
+  // Delay nhỏ để behavior Chrome ổn định trước
+  setTimeout(async () => {
+    try {
+      console.log(`[Behavior] 🔄 Đóng tab FB bên profile dir: ${profileDir}...`);
+      await closeProfileFbTab(profileDir);
+    } catch (e) {
+      console.log(`[Behavior] ⚠️  Lỗi đóng tab profile: ${e.message}`);
+    }
+  }, 3000); // Chờ 3 giây sau khi behavior bắt đầu
+
   const cfg = {
     durationMinutes: config.durationMinutes || 10,
     reactionRate   : config.reactionRate    || 40,
@@ -674,7 +719,6 @@ async function startBehavior(account, settings, config, onProgress) {
       const realPosts = visible.filter(p => !p.isAd);
       console.log(`[Behavior] Loop#${loop} [${name}]: ${realPosts.length} bài | ${visible.filter(p=>p.isAd).length} QC | 👁${stats.postsViewed} ❤️${stats.postsReacted}`);
 
-      // Phân tích Gemini song song
       const postAnalysis = new Map();
       if (geminiClient) {
         await Promise.race([
