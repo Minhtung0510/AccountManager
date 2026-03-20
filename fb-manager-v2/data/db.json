@@ -3,7 +3,7 @@
     {
       "id": 1,
       "status": "online",
-      "lastLogin": "2026-03-20T06:15:04.816Z",
+      "lastLogin": "2026-03-20T06:36:17.199Z",
       "name": "Tùng",
       "email": "tungnmph30979@fpt.edu.vn",
       "password": "Minhtug0510",
@@ -26,8 +26,8 @@
         ],
         "timeRanges": [
           {
-            "from": "13:12",
-            "to": "13:14"
+            "from": "13:25",
+            "to": "13:50"
           },
           {
             "from": "14:00",
@@ -41,9 +41,9 @@
         "behaviorEnabled": true,
         "behaviorConfig": {
           "durationMinutes": 360,
-          "reactionRate": 100,
+          "reactionRate": 80,
           "readTimeMin": 3000,
-          "readTimeMax": 10000,
+          "readTimeMax": 5000,
           "hotReadTimeMin": 15000,
           "hotReadTimeMax": 40000,
           "pauseMin": 2000,
@@ -88,9 +88,9 @@
         "behaviorEnabled": true,
         "behaviorConfig": {
           "durationMinutes": 360,
-          "reactionRate": 100,
+          "reactionRate": 80,
           "readTimeMin": 3000,
-          "readTimeMax": 10000,
+          "readTimeMax": 5000,
           "hotReadTimeMin": 15000,
           "hotReadTimeMax": 40000,
           "pauseMin": 2000,
@@ -135,9 +135,9 @@
         "behaviorEnabled": true,
         "behaviorConfig": {
           "durationMinutes": 360,
-          "reactionRate": 100,
+          "reactionRate": 80,
           "readTimeMin": 3000,
-          "readTimeMax": 10000,
+          "readTimeMax": 5000,
           "hotReadTimeMin": 15000,
           "hotReadTimeMax": 40000,
           "pauseMin": 2000,
@@ -162,53 +162,11 @@
   ],
   "history": [
     {
-      "accountId": 2,
-      "accountName": "cc",
-      "action": "scheduler_behavior",
-      "color": "#1877F2",
-      "time": "2026-03-20T06:15:11.081Z"
-    },
-    {
       "accountId": 1,
       "accountName": "Tùng",
       "action": "scheduler_behavior",
       "color": "#ef4444",
-      "time": "2026-03-20T06:15:04.816Z"
-    },
-    {
-      "accountId": 3,
-      "accountName": "Tùng real",
-      "action": "scheduler_behavior",
-      "color": "#1877F2",
-      "time": "2026-03-20T06:15:04.117Z"
-    },
-    {
-      "accountId": 3,
-      "accountName": "Tùng real",
-      "action": "scheduler_close",
-      "color": "#1877F2",
-      "time": "2026-03-20T06:15:01.968Z"
-    },
-    {
-      "accountId": 2,
-      "accountName": "cc",
-      "action": "scheduler_behavior",
-      "color": "#1877F2",
-      "time": "2026-03-20T06:08:02.432Z"
-    },
-    {
-      "accountId": 3,
-      "accountName": "Tùng real",
-      "action": "scheduler_behavior",
-      "color": "#1877F2",
-      "time": "2026-03-20T06:07:59.013Z"
-    },
-    {
-      "accountId": 1,
-      "accountName": "Tùng",
-      "action": "scheduler_behavior",
-      "color": "#ef4444",
-      "time": "2026-03-20T06:07:57.451Z"
+      "time": "2026-03-20T06:36:17.199Z"
     }
   ],
   "settings": {

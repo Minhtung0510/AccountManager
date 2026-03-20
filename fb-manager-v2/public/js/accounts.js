@@ -278,11 +278,11 @@ const Accounts = {
     this._schedulerId = id;
     const a = this.list.find(x => x.id === id);
     if (!a) return;
-
+ 
     const modal = Utils.qs('#schedulerModal');
     modal.classList.add('open');
     Utils.qs('#schedulerTitle').textContent = `⏰ Lịch tự động — ${a.name}`;
-
+ 
     const cfg = a.schedulerConfig || {
       enabled        : false,
       intervalMinutes: 30,
@@ -291,36 +291,54 @@ const Accounts = {
         { from: '08:00', to: '11:00' },
         { from: '14:00', to: '17:00' },
       ],
+      behaviorEnabled: false,
+      behaviorConfig : null,
     };
-
+ 
     Utils.qs('#schEnabled').checked         = cfg.enabled;
     Utils.qs('#schInterval').value          = cfg.intervalMinutes || 30;
     Utils.qs('#schIntervalVal').textContent = (cfg.intervalMinutes || 30) + ' phút';
-
+ 
     const days = cfg.daysOfWeek || [1,2,3,4,5];
     Utils.qsa('.day-btn').forEach(btn => {
       btn.classList.toggle('active', days.includes(Number(btn.dataset.day)));
     });
-
+ 
     this._renderTimeRanges(cfg.timeRanges || []);
-       const bhEnabled = cfg.behaviorEnabled || false;
+ 
+    // Bật/tắt behavior
+    const bhEnabled = cfg.behaviorEnabled || false;
     const bhEl = Utils.qs('#schBehaviorEnabled');
     if (bhEl) {
       bhEl.checked = bhEnabled;
       this.toggleSchedulerBehavior(bhEnabled);
     }
-    if (cfg.behaviorConfig) {
-      const durEl  = Utils.qs('#schBhDuration');
-      const rateEl = Utils.qs('#schBhRate');
-      if (durEl)  durEl.value  = cfg.behaviorConfig.durationMinutes || 10;
-      if (rateEl) rateEl.value = cfg.behaviorConfig.reactionRate    || 40;
-    }
+ 
+    // Load toàn bộ behaviorConfig vào form
+    const bc = cfg.behaviorConfig || {};
+    const settings = await API.getSettings();
+ 
+    // Gemini key — ưu tiên từ behaviorConfig, fallback settings
+    const geminiKey = bc.geminiApiKey || settings.geminiApiKey || '';
+    if (Utils.qs('#schGeminiKey')) Utils.qs('#schGeminiKey').value = geminiKey;
+ 
+    // Các tham số behavior
+    if (Utils.qs('#schBhDuration')) Utils.qs('#schBhDuration').value  = bc.durationMinutes || 10;
+    if (Utils.qs('#schBhRate'))     Utils.qs('#schBhRate').value      = bc.reactionRate    || 40;
+    if (Utils.qs('#schBhReadMin'))  Utils.qs('#schBhReadMin').value   = bc.readTimeMin     || 800;
+    if (Utils.qs('#schBhReadMax'))  Utils.qs('#schBhReadMax').value   = bc.readTimeMax     || 3000;
+    if (Utils.qs('#schBhHotMin'))   Utils.qs('#schBhHotMin').value    = bc.hotReadTimeMin  || 3000;
+    if (Utils.qs('#schBhHotMax'))   Utils.qs('#schBhHotMax').value    = bc.hotReadTimeMax  || 8000;
+    if (Utils.qs('#schBhPauseMin')) Utils.qs('#schBhPauseMin').value  = bc.pauseMin        || 500;
+    if (Utils.qs('#schBhPauseMax')) Utils.qs('#schBhPauseMax').value  = bc.pauseMax        || 1500;
+ 
+    // Load logs
     try {
       const status = await API.getScheduler(id);
       const logEl  = Utils.qs('#schedulerLogs');
       if (status.logs?.length) {
         logEl.innerHTML = status.logs.map(l =>
-          `<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);color:var(--text-secondary)">
+          `<div style="padding:2px 0;border-bottom:1px solid var(--border);color:var(--text-secondary)">
             <span style="color:var(--text-muted)">${Utils.timeAgo(l.time)}</span> ${Utils.esc(l.message)}
           </div>`
         ).join('');
@@ -329,7 +347,6 @@ const Accounts = {
       }
     } catch {}
   },
-
   _renderTimeRanges(ranges) {
     const container = Utils.qs('#timeRanges');
     this._timeRanges = [...ranges];
@@ -359,10 +376,11 @@ toggleSchedulerBehavior(enabled) {
     const el = Utils.qs('#schBehaviorConfig');
     if (el) el.style.display = enabled ? 'block' : 'none';
   },
-   async saveScheduler() {
+ async saveScheduler() {
     const id = this._schedulerId;
     if (!id) return;
  
+    // Lấy time ranges
     const ranges = [];
     (this._timeRanges || []).forEach((_, i) => {
       const from = Utils.qs(`#tr-from-${i}`)?.value;
@@ -370,21 +388,34 @@ toggleSchedulerBehavior(enabled) {
       if (from && to) ranges.push({ from, to });
     });
  
+    // Lấy ngày
     const days = [];
     Utils.qsa('.day-btn.active').forEach(btn => days.push(Number(btn.dataset.day)));
  
-    // Lấy behavior config nếu bật
+    // Lấy behavior config đầy đủ
     const behaviorEnabled = Utils.qs('#schBehaviorEnabled')?.checked || false;
-    const behaviorConfig  = behaviorEnabled ? {
-      durationMinutes: Number(Utils.qs('#schBhDuration')?.value) || 10,
-      reactionRate   : Number(Utils.qs('#schBhRate')?.value)     || 40,
-      readTimeMin    : 3000,
-      readTimeMax    : 10000,
-      hotReadTimeMin : 15000,
-      hotReadTimeMax : 40000,
-      pauseMin       : 2000,
-      pauseMax       : 6000,
-    } : null;
+ 
+    let behaviorConfig = null;
+    if (behaviorEnabled) {
+      const geminiKey = Utils.qs('#schGeminiKey')?.value?.trim() || '';
+ 
+      // Lưu Gemini key vào settings nếu có
+      if (geminiKey) {
+        await API.saveSettings({ geminiApiKey: geminiKey });
+      }
+ 
+      behaviorConfig = {
+        geminiApiKey   : geminiKey,
+        durationMinutes: Number(Utils.qs('#schBhDuration')?.value)  || 10,
+        reactionRate   : Number(Utils.qs('#schBhRate')?.value)       || 40,
+        readTimeMin    : Number(Utils.qs('#schBhReadMin')?.value)    || 800,
+        readTimeMax    : Number(Utils.qs('#schBhReadMax')?.value)    || 3000,
+        hotReadTimeMin : Number(Utils.qs('#schBhHotMin')?.value)     || 3000,
+        hotReadTimeMax : Number(Utils.qs('#schBhHotMax')?.value)     || 8000,
+        pauseMin       : Number(Utils.qs('#schBhPauseMin')?.value)   || 500,
+        pauseMax       : Number(Utils.qs('#schBhPauseMax')?.value)   || 1500,
+      };
+    }
  
     const config = {
       enabled         : Utils.qs('#schEnabled').checked,
@@ -397,9 +428,8 @@ toggleSchedulerBehavior(enabled) {
  
     try {
       await API.setScheduler(id, config);
-      const msg = config.enabled
-        ? `✅ Đã bật lịch${behaviorEnabled ? ' + 🤖 Giả lập hành vi' : ''}!`
-        : '⏹ Đã tắt lịch';
+      let msg = config.enabled ? '✅ Đã bật lịch' : '⏹ Đã tắt lịch';
+      if (config.enabled && behaviorEnabled) msg += ' + 🤖 Giả lập hành vi';
       Toast.success(msg);
       this.closeScheduler();
       await this.load();
@@ -407,7 +437,6 @@ toggleSchedulerBehavior(enabled) {
       Toast.error('Lỗi lưu lịch');
     }
   },
-
   closeScheduler() {
     Utils.qs('#schedulerModal').classList.remove('open');
     this._schedulerId = null;

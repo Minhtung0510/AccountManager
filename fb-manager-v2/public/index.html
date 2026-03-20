@@ -351,12 +351,12 @@
 
 <!-- MODAL: SCHEDULER -->
 <div id="schedulerModal" class="modal-overlay">
-  <div class="modal" style="max-width:500px">
+  <div class="modal" style="max-width:520px">
     <div class="modal-header">
       <div class="modal-title" id="schedulerTitle">⏰ Lịch tự động</div>
       <button class="modal-close" onclick="Accounts.closeScheduler()">✕</button>
     </div>
-
+ 
     <!-- Bật/tắt -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:14px">
       <div>
@@ -368,7 +368,7 @@
         <span class="toggle-slider"></span>
       </label>
     </div>
-
+ 
     <!-- Ngày trong tuần -->
     <div class="form-group">
       <label class="form-label">Ngày hoạt động</label>
@@ -382,7 +382,7 @@
         <button class="day-btn" data-day="0" onclick="Accounts.toggleDay(this)">CN</button>
       </div>
     </div>
-
+ 
     <!-- Khung giờ -->
     <div class="form-group">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -391,7 +391,7 @@
       </div>
       <div id="timeRanges"></div>
     </div>
-
+ 
     <!-- Tần suất -->
     <div class="form-group">
       <label class="form-label">Tần suất mở lại</label>
@@ -400,42 +400,99 @@
           oninput="document.getElementById('schIntervalVal').textContent=this.value+' phút'">
         <span id="schIntervalVal" style="font-size:13px;color:var(--text-secondary);min-width:60px">30 phút</span>
       </div>
-      <div class="form-hint">Mở lại sau mỗi X phút trong khung giờ đã chọn</div>  
-      <div class="form-group">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin-top:4px">
-    <div>
-      <div style="font-size:13px;font-weight:600">🤖 Kết hợp giả lập hành vi</div>
-      <div style="font-size:11px;color:var(--text-muted)">Tự động scroll + thả cảm xúc khi đến lịch</div>
+      <div class="form-hint">Mở lại sau mỗi X phút trong khung giờ đã chọn</div>
     </div>
-    <label class="toggle">
-      <input type="checkbox" id="schBehaviorEnabled" onchange="Accounts.toggleSchedulerBehavior(this.checked)">
-      <span class="toggle-slider"></span>
-    </label>
-  </div>
  
-  <!-- Cấu hình behavior (hiện khi bật) -->
-  <div id="schBehaviorConfig" style="display:none;background:var(--bg-tertiary);border-radius:var(--radius-md);padding:10px 12px;margin-top:8px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏱ Thời gian chạy (phút)</div>
-        <input type="number" class="form-input" id="schBhDuration" value="10" min="5" max="60" style="font-size:12px">
+    <!-- Kết hợp giả lập hành vi -->
+    <div class="form-group">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600">🤖 Kết hợp giả lập hành vi</div>
+          <div style="font-size:11px;color:var(--text-muted)">Tự động scroll + thả cảm xúc khi đến lịch</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="schBehaviorEnabled" onchange="Accounts.toggleSchedulerBehavior(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
       </div>
-      <div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">❤️ Tỉ lệ thả cảm xúc (%)</div>
-        <input type="number" class="form-input" id="schBhRate" value="40" min="10" max="80" style="font-size:12px">
+ 
+      <!-- Cấu hình behavior đầy đủ -->
+      <div id="schBehaviorConfig" style="display:none;background:var(--bg-tertiary);border-radius:var(--radius-md);padding:12px;margin-top:8px">
+ 
+        <!-- Gemini API Key -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔑 Gemini API Key</div>
+          <div class="password-wrap">
+            <input class="form-input" id="schGeminiKey" type="password" placeholder="AIzaSy..." style="font-size:12px">
+            <button class="toggle-pass" type="button"
+              onclick="const f=document.getElementById('schGeminiKey');f.type=f.type==='password'?'text':'password'">👁</button>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">
+            Lấy miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a>
+          </div>
+        </div>
+ 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <!-- Thời gian chạy -->
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏱ Thời gian chạy (phút)</div>
+            <input type="number" class="form-input" id="schBhDuration" value="10" min="5" max="120" style="font-size:12px">
+          </div>
+          <!-- Tỉ lệ thả cảm xúc -->
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">❤️ Tỉ lệ thả cảm xúc (%)</div>
+            <input type="number" class="form-input" id="schBhRate" value="40" min="10" max="80" style="font-size:12px">
+          </div>
+        </div>
+ 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <!-- Thời gian đọc bài -->
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">👁 Đọc bài tối thiểu (ms)</div>
+            <input type="number" class="form-input" id="schBhReadMin" value="800" min="300" max="5000" step="100" style="font-size:12px">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">👁 Đọc bài tối đa (ms)</div>
+            <input type="number" class="form-input" id="schBhReadMax" value="3000" min="1000" max="15000" step="100" style="font-size:12px">
+          </div>
+        </div>
+ 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <!-- Bài hot -->
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔥 Bài hot tối thiểu (ms)</div>
+            <input type="number" class="form-input" id="schBhHotMin" value="3000" min="1000" max="15000" step="500" style="font-size:12px">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">🔥 Bài hot tối đa (ms)</div>
+            <input type="number" class="form-input" id="schBhHotMax" value="8000" min="3000" max="30000" step="500" style="font-size:12px">
+          </div>
+        </div>
+ 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <!-- Pause giữa các loop -->
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏸ Nghỉ giữa loop tối thiểu (ms)</div>
+            <input type="number" class="form-input" id="schBhPauseMin" value="500" min="200" max="5000" step="100" style="font-size:12px">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">⏸ Nghỉ giữa loop tối đa (ms)</div>
+            <input type="number" class="form-input" id="schBhPauseMax" value="1500" min="500" max="10000" step="100" style="font-size:12px">
+          </div>
+        </div>
+ 
+        <div style="margin-top:8px;padding:8px;background:var(--accent-light);border-radius:var(--radius-sm);font-size:11px;color:var(--accent)">
+          💡 Cần Gemini API Key để AI phân tích cảm xúc. Không có vẫn chạy được nhưng cảm xúc random.
+        </div>
       </div>
     </div>
-    <div class="form-hint" style="margin-top:6px">Cần có Gemini API Key trong Cài đặt để AI phân tích cảm xúc</div>
-  </div>
-</div>
-    </div>
-
+ 
     <!-- Logs -->
     <div class="form-group">
       <label class="form-label">Log hoạt động gần đây</label>
-      <div id="schedulerLogs" style="background:var(--bg-tertiary);border-radius:var(--radius-md);padding:8px 10px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:11px"></div>
+      <div id="schedulerLogs" style="background:var(--bg-tertiary);border-radius:var(--radius-md);padding:8px 10px;max-height:100px;overflow-y:auto;font-family:monospace;font-size:11px"></div>
     </div>
-
+ 
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="Accounts.closeScheduler()">Hủy</button>
       <button class="btn btn-primary" onclick="Accounts.saveScheduler()">💾 Lưu lịch</button>
