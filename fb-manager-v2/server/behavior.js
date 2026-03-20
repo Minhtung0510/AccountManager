@@ -518,32 +518,88 @@ async function reactToPost(page, postIdx, emotion) {
     const articles = await page.$$('[role="article"]');
     const article  = articles[postIdx];
     if (!article) return false;
-    const likeSelectors = ['[aria-label="Thích"][role="button"]','[aria-label="Like"][role="button"]','[data-testid="like_button"]'];
+ 
+    // Tìm nút react của BÀI VIẾT — KHÔNG phải của bình luận
+    // Logic: lọc bỏ các nút Like nằm bên trong comment list
     let likeBtn = null;
-    for (const sel of likeSelectors) {
-      const btns = await article.$$(sel);
-      if (btns.length > 0) { likeBtn = btns[0]; break; }
+ 
+    const likeBtnHandle = await article.evaluateHandle(el => {
+      const allBtns = [...el.querySelectorAll('[role="button"]')].filter(b => {
+        const label = (b.getAttribute('aria-label') || '').toLowerCase();
+        return label === 'thích' || label === 'like';
+      });
+      if (!allBtns.length) return null;
+ 
+      // Comment section chứa các nút Like của bình luận
+      // Thường nằm trong [role="list"] hoặc các container có aria-label về bình luận
+      const commentContainers = el.querySelectorAll(
+        '[role="list"], [aria-label*="ình luận"], [aria-label*="omment"], [aria-label*="Bình luận"]'
+      );
+      const commentBtns = new Set();
+      commentContainers.forEach(c => {
+        c.querySelectorAll('[role="button"]').forEach(b => commentBtns.add(b));
+      });
+ 
+      // Lấy nút Like đầu tiên KHÔNG nằm trong comment section → đây là nút của bài viết
+      return allBtns.find(b => !commentBtns.has(b)) || null;
+    });
+ 
+    // Kiểm tra handle hợp lệ
+    try {
+      const isNull = await likeBtnHandle.evaluate(el => el === null);
+      if (!isNull) likeBtn = likeBtnHandle;
+    } catch {}
+ 
+    // Fallback: nếu approach trên thất bại, dùng selector cũ
+    if (!likeBtn) {
+      const selectors = [
+        '[aria-label="Thích"][role="button"]',
+        '[aria-label="Like"][role="button"]',
+        '[data-testid="like_button"]',
+      ];
+      for (const sel of selectors) {
+        const btns = await article.$$(sel);
+        if (btns.length > 0) { likeBtn = btns[0]; break; }
+      }
     }
+ 
     if (!likeBtn) return false;
+ 
     if (emotion === 'like') {
-      await likeBtn.click(); await sleep(rand(400, 800));
-      console.log(`[Behavior] ❤️ Like bài #${postIdx}`);
+      await likeBtn.click();
+      await sleep(rand(400, 800));
+      console.log(`[Behavior] ❤️ Like BÀI VIẾT #${postIdx}`);
       return true;
     }
-    await likeBtn.hover(); await sleep(rand(1000, 1800));
-    const emotionMap = { haha:['[aria-label="Haha"]'], wow:['[aria-label="Wow"]'], sad:['[aria-label="Buồn"]','[aria-label="Sad"]'], angry:['[aria-label="Phẫn nộ"]','[aria-label="Angry"]'] };
+ 
+    // Hover để hiện reaction panel
+    await likeBtn.hover();
+    await sleep(rand(1000, 1800));
+ 
+    const emotionMap = {
+      haha : ['[aria-label="Haha"]'],
+      wow  : ['[aria-label="Wow"]'],
+      sad  : ['[aria-label="Buồn"]', '[aria-label="Sad"]'],
+      angry: ['[aria-label="Phẫn nộ"]', '[aria-label="Angry"]'],
+    };
+ 
     for (const sel of (emotionMap[emotion] || [])) {
       const btns = await page.$$(sel);
       if (btns.length > 0) {
-        await btns[btns.length-1].click(); await sleep(rand(400, 700));
-        const icons = { haha:'😂', wow:'😮', sad:'😢', angry:'😡' };
-        console.log(`[Behavior] ${icons[emotion]} ${emotion} bài #${postIdx}`);
+        await btns[btns.length - 1].click();
+        await sleep(rand(400, 700));
+        const icons = { haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+        console.log(`[Behavior] ${icons[emotion]} ${emotion} BÀI VIẾT #${postIdx}`);
         return true;
       }
     }
-    await likeBtn.click(); await sleep(rand(300, 600));
-    console.log(`[Behavior] ❤️ Fallback like #${postIdx}`);
+ 
+    // Fallback: click like
+    await likeBtn.click();
+    await sleep(rand(300, 600));
+    console.log(`[Behavior] ❤️ Fallback like BÀI VIẾT #${postIdx}`);
     return true;
+ 
   } catch (err) {
     console.error(`[Behavior] React error #${postIdx}:`, err.message);
     return false;
